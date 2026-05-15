@@ -58,7 +58,7 @@ const ProblemForm = ({
         </label>
         <div className="fixed-option-card">
           <span className="fixed-option-label">Tipo de modelo</span>
-          <strong>Maximización con restricciones &lt;=</strong>
+          <strong>Maximización con restricciones ≤</strong>
         </div>
       </div>
 

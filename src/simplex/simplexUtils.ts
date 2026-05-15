@@ -96,9 +96,10 @@ const parseNumericArray = (values: string[], errorMessage: string, errors: strin
 
 export const validateDraft = (draft: ProblemDraft): ValidationResult => {
   const errors: string[] = [];
+  const sprintScopeMessage = 'Este primer sprint solo soporta problemas de maximización con restricciones ≤, lado derecho positivo y variables no negativas.';
 
   if (draft.optimizationType !== 'max' || draft.constraintType !== '<=') {
-    errors.push('Este sprint solo soporta problemas de maximización con restricciones <=.');
+    errors.push(sprintScopeMessage);
   }
 
   if (draft.variableCount < 1) {
@@ -126,11 +127,12 @@ export const validateDraft = (draft: ProblemDraft): ValidationResult => {
     if (Number.isNaN(rhs)) {
       errors.push(`El lado derecho de la restricción ${rowIndex + 1} debe ser numérico.`);
     } else if (rhs < 0) {
+      errors.push(sprintScopeMessage);
       errors.push(`El lado derecho de la restricción ${rowIndex + 1} debe ser mayor o igual a cero.`);
     }
 
     if (constraint.type !== '<=') {
-      errors.push('Este sprint solo soporta restricciones <=.');
+      errors.push(sprintScopeMessage);
     }
 
     return {

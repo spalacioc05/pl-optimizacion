@@ -1,12 +1,13 @@
 import { SimplexIteration, SimplexTableau } from '../simplex/simplexTypes';
-import { formatNumber } from '../simplex/simplexUtils';
+import { EPSILON, formatNumber } from '../simplex/simplexUtils';
 
 interface SimplexTableProps {
   tableau: SimplexTableau;
   iteration?: Pick<SimplexIteration, 'pivotColumnIndex' | 'pivotRowIndex' | 'ratios'>;
+  highlightNegativeObjective?: boolean;
 }
 
-const SimplexTable = ({ tableau, iteration }: SimplexTableProps) => {
+const SimplexTable = ({ tableau, iteration, highlightNegativeObjective = false }: SimplexTableProps) => {
   const rhsIndex = tableau.headers.length - 1;
 
   return (
@@ -42,6 +43,11 @@ const SimplexTable = ({ tableau, iteration }: SimplexTableProps) => {
                 const isPivotColumn = iteration?.pivotColumnIndex === columnIndex;
                 const isPivotRow = iteration?.pivotRowIndex === rowIndex;
                 const isPivotElement = isPivotColumn && isPivotRow;
+                const isObjectiveAlert = highlightNegativeObjective
+                  && rowIndex === 0
+                  && columnIndex > 0
+                  && columnIndex < rhsIndex
+                  && value < -EPSILON;
 
                 return (
                   <td
@@ -51,13 +57,17 @@ const SimplexTable = ({ tableau, iteration }: SimplexTableProps) => {
                       isPivotRow ? 'pivot-row-cell' : '',
                       isPivotElement ? 'pivot-element-cell' : '',
                       columnIndex === rhsIndex ? 'rhs-cell' : '',
+                      isObjectiveAlert ? 'objective-alert-cell' : '',
                     ].join(' ').trim() || undefined}
                   >
                     {formatNumber(value)}
                   </td>
                 );
               })}
-              <td className="ratio-cell">
+              <td className={[
+                'ratio-cell',
+                iteration?.pivotRowIndex === rowIndex ? 'selected-ratio-cell' : '',
+              ].join(' ').trim() || undefined}>
                 {rowIndex === 0
                   ? '-'
                   : iteration?.ratios?.[rowIndex - 1]?.value === null

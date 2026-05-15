@@ -7,6 +7,11 @@ interface IterationCardProps {
 }
 
 const IterationCard = ({ iteration }: IterationCardProps) => {
+  const positiveRatios = iteration.ratios
+    .filter((ratio) => ratio.value !== null)
+    .map((ratio) => ratio.value as number);
+  const minimumRatio = positiveRatios.length > 0 ? Math.min(...positiveRatios) : null;
+
   return (
     <article className="panel iteration-card">
       <div className="iteration-header">
@@ -16,9 +21,9 @@ const IterationCard = ({ iteration }: IterationCardProps) => {
         </div>
         <div className="iteration-header-side">
           <div className="iteration-number-chip">#{iteration.iterationNumber}</div>
-        <div className={`status-badge ${iteration.isOptimal ? 'optimal' : 'working'}`}>
-          {iteration.isOptimal ? 'Óptima' : 'En proceso'}
-        </div>
+          <div className={`status-badge ${iteration.isOptimal ? 'optimal' : 'working'}`}>
+            {iteration.isOptimal ? 'Óptima' : 'En proceso'}
+          </div>
         </div>
       </div>
 
@@ -59,7 +64,19 @@ const IterationCard = ({ iteration }: IterationCardProps) => {
           <h4>Razones calculadas</h4>
           <ul>
             {iteration.ratios.map((ratio) => (
-              <li key={`${iteration.iterationNumber}-${ratio.basicVariable}`}>{`${ratio.basicVariable}: ${ratio.expression}`}</li>
+              <li
+                key={`${iteration.iterationNumber}-${ratio.basicVariable}`}
+                className={[
+                  'ratio-item',
+                  ratio.value !== null && minimumRatio !== null && Math.abs(ratio.value - minimumRatio) < 1e-9
+                    ? 'selected-ratio-item'
+                    : '',
+                  iteration.leavingVariable === ratio.basicVariable ? 'leaving-ratio-item' : '',
+                ].join(' ').trim() || undefined}
+              >
+                <strong>{`${ratio.basicVariable}:`}</strong>
+                <span>{ratio.expression}</span>
+              </li>
             ))}
           </ul>
         </section>
@@ -67,9 +84,9 @@ const IterationCard = ({ iteration }: IterationCardProps) => {
         <section className="detail-block technical-block">
           <h4>Operaciones de renglón</h4>
           {iteration.rowOperations.length > 0 ? (
-            <ul>
+            <ul className="operation-list">
               {iteration.rowOperations.map((operation) => (
-                <li key={`${iteration.iterationNumber}-${operation}`}>{operation}</li>
+                <li key={`${iteration.iterationNumber}-${operation}`} className="operation-line">{operation}</li>
               ))}
             </ul>
           ) : (
@@ -80,9 +97,9 @@ const IterationCard = ({ iteration }: IterationCardProps) => {
 
       <section className="detail-block explanation-block reading-block">
         <h4>Explicación de la iteración</h4>
-        <ul>
+        <ul className="explanation-list">
           {iteration.explanation.map((item) => (
-            <li key={`${iteration.iterationNumber}-${item}`}>{item}</li>
+            <li key={`${iteration.iterationNumber}-${item}`} className="explanation-step">{item}</li>
           ))}
         </ul>
       </section>

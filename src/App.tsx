@@ -1,9 +1,7 @@
 import { useMemo, useState } from 'react';
 import ExampleSelector from './components/ExampleSelector';
-import IterationCard from './components/IterationCard';
-import ModelReferenceCard from './components/ModelReferenceCard';
 import ProblemForm from './components/ProblemForm';
-import SolutionSummary from './components/SolutionSummary';
+import StepByStepPlayer from './components/StepByStepPlayer';
 import { exampleProblems } from './simplex/examples';
 import { solveSimplex } from './simplex/simplexSolver';
 import {
@@ -21,31 +19,31 @@ import {
   validateDraft,
 } from './simplex/simplexUtils';
 
-const exampleVisualReferences = {
+const exampleInsights = {
   wyndor: {
-    title: 'Wyndor Glass',
-    expectedPoint: { x: 2, y: 6 },
-    axisMax: { x: 6, y: 8 },
-    expectedResultLines: ['X1 = 2', 'X2 = 6', 'Z = 36', 'S1 = 2', 'S2 = 0', 'S3 = 0'],
     interpretation:
       'Se deben fabricar 2 lotes del producto 1 y 6 lotes del producto 2. La ganancia máxima es 36. La primera restricción queda con holgura de 2 unidades y las restricciones 2 y 3 se usan completamente.',
   },
   'word-light': {
-    title: 'Word Light',
-    expectedPoint: { x: 125, y: 25 },
-    axisMax: { x: 160, y: 80 },
-    expectedResultLines: ['X1 = 125', 'X2 = 25', 'Z = 175', 'S1 = 0', 'S2 = 0', 'S3 = 35'],
     interpretation:
       'La empresa debe fabricar 125 unidades del producto 1 y 25 unidades del producto 2 para obtener una ganancia máxima de 175. Las restricciones 1 y 2 quedan completamente utilizadas, y la restricción 3 queda con una holgura de 35 unidades.',
   },
+  'simplex-tabular-material': {
+    interpretation:
+      'El óptimo se obtiene en el punto X1 = 3 y X2 = 1.5, con valor Z = 21. Las restricciones 1 y 2 quedan activas, mientras las restricciones 3 y 4 conservan holguras de 2.5 y 0.5 respectivamente.',
+  },
 } as const;
+
+const heroScopeItems = ['Maximización', 'Restricciones ≤', 'Variables ≥ 0', 'Tablero Simplex', 'Sprint 1'];
+
+const toDisplayMath = (value: string): string => value.replace(/<=/g, '≤').replace(/>=/g, '≥');
 
 const App = () => {
   const [draft, setDraft] = useState<ProblemDraft>(createEmptyDraft());
   const [errors, setErrors] = useState<string[]>([]);
   const [solvedProblem, setSolvedProblem] = useState<LinearProgrammingProblem | null>(null);
   const [result, setResult] = useState<SimplexResult | null>(null);
-  const [selectedExampleId, setSelectedExampleId] = useState<keyof typeof exampleVisualReferences | null>(null);
+  const [selectedExampleId, setSelectedExampleId] = useState<string | null>(null);
 
   const handleVariableCountChange = (value: number) => {
     setSelectedExampleId(null);
@@ -124,12 +122,16 @@ const App = () => {
   const handleExampleSelect = (example: ExampleProblem) => {
     const nextDraft = problemToDraft(example.problem);
     setDraft(nextDraft);
-    setSelectedExampleId(example.id as keyof typeof exampleVisualReferences);
+    setSelectedExampleId(example.id);
     solveCurrentProblem(nextDraft);
   };
 
-  const selectedReference = useMemo(
-    () => (selectedExampleId ? exampleVisualReferences[selectedExampleId] : undefined),
+  const selectedInsight = useMemo(
+    () => (
+      selectedExampleId && selectedExampleId in exampleInsights
+        ? exampleInsights[selectedExampleId as keyof typeof exampleInsights]
+        : undefined
+    ),
     [selectedExampleId],
   );
 
@@ -145,6 +147,19 @@ const App = () => {
     ];
   }, [solvedProblem]);
 
+  const displayedOriginalModel = useMemo(
+    () => originalModel.map((line) => toDisplayMath(line)),
+    [originalModel],
+  );
+
+  const displayedAugmentedModel = useMemo(() => {
+    if (!result) {
+      return [];
+    }
+
+    return [result.augmentedObjective, ...result.augmentedConstraints].map((line) => toDisplayMath(line));
+  }, [result]);
+
   return (
     <div className="app-shell">
       <header className="hero-panel">
@@ -154,19 +169,14 @@ const App = () => {
           <p className="eyebrow">Primer sprint académico</p>
           <span className="hero-kicker">Aplicación web para investigación de operaciones</span>
           <h1>Solver de Programación Lineal</h1>
-          <h2 className="hero-subtitle">Método Simplex paso a paso para modelos de maximización</h2>
+          <h2 className="hero-subtitle">Método Simplex paso a paso</h2>
           <p>
             Ingresa un modelo en forma básica y observa la conversión a forma aumentada, los tableros Simplex y la solución óptima.
           </p>
-          <div className="hero-highlights">
-            <div className="hero-highlight-card">
-              <strong>Visualización tablero a tablero</strong>
-              <span>Cada iteración muestra variable entrante, saliente, pivote y operaciones de renglón.</span>
-            </div>
-            <div className="hero-highlight-card">
-              <strong>Preparado para siguientes sprints</strong>
-              <span>Estructura modular lista para extenderse a nuevos métodos y reportes.</span>
-            </div>
+          <div className="hero-chip-row">
+            {heroScopeItems.map((item) => (
+              <span key={item} className="hero-scope-chip">{item}</span>
+            ))}
           </div>
         </div>
         <div className="hero-note">
@@ -174,7 +184,7 @@ const App = () => {
             <span className="pill-label">Alcance del sprint</span>
             <strong>Método Simplex normal</strong>
           </div>
-          <p>Maximización, restricciones &lt;=, lado derecho positivo y variables no negativas.</p>
+          <p>Maximización, restricciones ≤, lado derecho positivo y variables no negativas.</p>
           <div className="hero-stats-grid">
             <div className="hero-stat">
               <span>Objetivo</span>
@@ -223,49 +233,13 @@ const App = () => {
 
           {solvedProblem && result ? (
             <>
-              <section className="panel model-panel section-emphasis">
-                <div className="panel-header">
-                  <div>
-                    <p className="eyebrow">Paso 1</p>
-                    <h2>Modelo original</h2>
-                  </div>
-                </div>
-                <div className="equation-list">
-                  {originalModel.map((line) => (
-                    <p key={line}>{line}</p>
-                  ))}
-                </div>
-              </section>
-
-              <section className="panel model-panel section-emphasis">
-                <div className="panel-header">
-                  <div>
-                    <p className="eyebrow">Paso 2</p>
-                    <h2>Conversión a forma aumentada</h2>
-                  </div>
-                  <p className="panel-copy">
-                    Las variables de holgura se agregan a las restricciones &lt;=, tienen coeficiente 1 en su propia restricción, 0 en las demás y costo 0 en la función objetivo.
-                  </p>
-                </div>
-                <div className="equation-list">
-                  <p>{result.augmentedObjective}</p>
-                  {result.augmentedConstraints.map((line) => (
-                    <p key={line}>{line}</p>
-                  ))}
-                </div>
-              </section>
-
-              {solvedProblem.objectiveCoefficients.length === 2 ? (
-                <ModelReferenceCard variableCount={2} reference={selectedReference} />
-              ) : null}
-
-              <section className="iterations-section">
-                {result.iterations.map((iteration) => (
-                  <IterationCard key={`iteration-${iteration.iterationNumber}`} iteration={iteration} />
-                ))}
-              </section>
-
-              <SolutionSummary result={result} interpretation={selectedReference?.interpretation} />
+              <StepByStepPlayer
+                problem={solvedProblem}
+                originalModel={displayedOriginalModel}
+                augmentedModel={displayedAugmentedModel}
+                result={result}
+                interpretation={selectedInsight?.interpretation}
+              />
             </>
           ) : (
             <section className="panel empty-panel section-emphasis">

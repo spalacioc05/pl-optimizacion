@@ -7,11 +7,18 @@ interface SolutionSummaryProps {
 }
 
 const SolutionSummary = ({ result, interpretation }: SolutionSummaryProps) => {
+  const orderedDecisionVariables = Object.entries(result.decisionVariables)
+    .sort(([left], [right]) => left.localeCompare(right, 'es'));
+  const orderedSlackVariables = Object.entries(result.slackVariables)
+    .sort(([left], [right]) => left.localeCompare(right, 'es'));
   const statusLabel = result.status === 'optimal'
     ? 'Óptima'
     : result.status === 'unbounded'
       ? 'No acotado'
       : 'Error';
+  const optimalPoint = result.decisionVariables.X1 !== undefined && result.decisionVariables.X2 !== undefined
+    ? `(${formatNumber(result.decisionVariables.X1)}, ${formatNumber(result.decisionVariables.X2)})`
+    : null;
 
   return (
     <section className="panel solution-panel">
@@ -27,12 +34,13 @@ const SolutionSummary = ({ result, interpretation }: SolutionSummaryProps) => {
         <article className="solution-card accent-card solution-hero-card">
           <span>Valor óptimo</span>
           <strong className="optimal-z-value">Z = {formatNumber(result.optimalValue)}</strong>
+          {optimalPoint ? <p className="solution-hero-note">{`Punto óptimo ${optimalPoint}`}</p> : null}
         </article>
 
         <article className="solution-card">
           <h3>Variables de decisión</h3>
           <div className="solution-pill-grid">
-            {Object.entries(result.decisionVariables).map(([name, value]) => (
+            {orderedDecisionVariables.map(([name, value]) => (
               <div key={name} className="solution-value-pill">{`${name} = ${formatNumber(value)}`}</div>
             ))}
           </div>
@@ -41,11 +49,21 @@ const SolutionSummary = ({ result, interpretation }: SolutionSummaryProps) => {
         <article className="solution-card">
           <h3>Variables de holgura</h3>
           <div className="solution-pill-grid">
-            {Object.entries(result.slackVariables).map(([name, value]) => (
+            {orderedSlackVariables.map(([name, value]) => (
               <div key={name} className="solution-value-pill slack-pill">{`${name} = ${formatNumber(value)}`}</div>
             ))}
           </div>
         </article>
+
+        {optimalPoint ? (
+          <article className="solution-card solution-note-card">
+            <h3>Clasificación del óptimo</h3>
+            <div className="solution-pill-grid">
+              <div className="solution-value-pill">{`Punto óptimo ${optimalPoint}`}</div>
+              <div className="solution-value-pill success-pill">Máximo global en la región factible</div>
+            </div>
+          </article>
+        ) : null}
       </div>
 
       <div className="interpretation-box">
