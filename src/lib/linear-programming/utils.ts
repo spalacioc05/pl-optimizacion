@@ -346,6 +346,13 @@ export const tableauToBoard = (
     })),
     pivotCol: options?.pivotColumnIndex,
     pivotRow: options?.pivotRowIndex,
+    negativeColumns: tableau.rows[0]
+      .map((value, columnIndex) => ({ value, columnIndex }))
+      .filter(
+        ({ value, columnIndex }) =>
+          columnIndex > 0 && columnIndex < tableau.headers.length - 1 && value < -EPSILON,
+      )
+      .map(({ columnIndex }) => columnIndex),
   };
 };
 

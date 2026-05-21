@@ -4,6 +4,7 @@ import type {
   SimplexIteration,
   SimplexResult,
   SimplexTableau,
+  StepSummary,
   SolverStep,
 } from "@/lib/linear-programming/types";
 import {
@@ -230,6 +231,66 @@ const buildInitialExplanation = (
   ];
 };
 
+const getMostNegativeCoefficient = (
+  tableau: SimplexTableau,
+): { variable: string; value: number } | undefined => {
+  const rhsIndex = tableau.headers.length - 1;
+  let selected: { variable: string; value: number } | undefined;
+
+  for (let columnIndex = 1; columnIndex < rhsIndex; columnIndex += 1) {
+    const value = tableau.rows[0][columnIndex];
+    if (value < -EPSILON && (!selected || value < selected.value)) {
+      selected = {
+        variable: tableau.headers[columnIndex],
+        value: roundForDisplay(value),
+      };
+    }
+  }
+
+  return selected;
+};
+
+const buildStepSummary = (
+  tableau: SimplexTableau,
+  options: {
+    reason: string;
+    status: string;
+    enteringVariable?: string;
+    leavingVariable?: string;
+    pivotValue?: number;
+    pivotRowIndex?: number;
+    pivotColumnIndex?: number;
+  },
+): StepSummary => {
+  const basicVariables = tableau.basicVariables.slice(1);
+  const allVariables = tableau.headers.slice(1, tableau.headers.length - 1);
+  const nonBasicVariables = allVariables.filter((variable) => !basicVariables.includes(variable));
+  const solution = allVariables.reduce<Record<string, number>>((accumulator, variable) => {
+    const values = getBasicVariableValues(tableau);
+    accumulator[variable] = values[variable] ?? 0;
+    return accumulator;
+  }, {});
+  const mostNegative = getMostNegativeCoefficient(tableau);
+
+  return {
+    basicVariables,
+    nonBasicVariables,
+    solution,
+    objectiveValue: roundForDisplay(tableau.rows[0][tableau.headers.length - 1]),
+    status: options.status,
+    reason: options.reason,
+    enteringVariable: options.enteringVariable,
+    leavingVariable: options.leavingVariable,
+    pivotValue: options.pivotValue,
+    pivotPosition:
+      options.pivotRowIndex !== undefined && options.pivotColumnIndex !== undefined
+        ? `${tableau.basicVariables[options.pivotRowIndex]} / ${tableau.headers[options.pivotColumnIndex]}`
+        : undefined,
+    mostNegativeVariable: mostNegative?.variable,
+    mostNegativeValue: mostNegative?.value,
+  };
+};
+
 export const solveSimplex = (problem: LinearProgrammingProblem): SimplexResult => {
   const iterations: SimplexIteration[] = [];
   const initialState = buildInitialState(problem);
@@ -402,6 +463,12 @@ export const buildSimplexSteps = (
         "Las variables de holgura forman la base inicial. Desde este tablero se verifica la optimalidad y se decide si el método debe continuar.",
       kind: "tableau",
       table: tableauToBoard(initialIteration.resultTableau),
+      tableCaption: "Solución básica factible inicial",
+      summary: buildStepSummary(initialIteration.resultTableau, {
+        status: "No óptima",
+        reason:
+          "La base inicial usa variables de holgura. Todavía hay coeficientes negativos en la fila Z, por lo que el método debe iterar.",
+      }),
     });
   }
 
@@ -421,6 +488,18 @@ export const buildSimplexSteps = (
           pivotColumnIndex: iteration.pivotColumnIndex,
           ratios,
         }),
+        tableCaption: "Antes de seleccionar la variable entrante",
+        summary: buildStepSummary(iteration.sourceTableau, {
+          status: "No óptima",
+          reason:
+            iteration.enteringVariable && iteration.pivotColumnIndex !== undefined
+              ? `En la fila Z, el coeficiente más negativo es ${formatNumber(
+                  iteration.sourceTableau.rows[0][iteration.pivotColumnIndex],
+                )}, correspondiente a ${iteration.enteringVariable}.`
+              : "Aún existen coeficientes negativos en la fila Z.",
+          enteringVariable: iteration.enteringVariable,
+          pivotColumnIndex: iteration.pivotColumnIndex,
+        }),
       },
       {
         id: `entering-${iteration.iterationNumber}`,
@@ -435,6 +514,18 @@ export const buildSimplexSteps = (
           ratios,
         }),
         highlights: { entering: iteration.enteringVariable },
+        tableCaption: "La columna pivote queda resaltada",
+        summary: buildStepSummary(iteration.sourceTableau, {
+          status: "Selección de variable entrante",
+          reason:
+            iteration.enteringVariable && iteration.pivotColumnIndex !== undefined
+              ? `En la fila Z, el coeficiente más negativo es ${formatNumber(
+                  iteration.sourceTableau.rows[0][iteration.pivotColumnIndex],
+                )}, correspondiente a ${iteration.enteringVariable}. Por eso ${iteration.enteringVariable} entra a la base.`
+              : "Se elige la variable con el coeficiente más negativo en la fila Z.",
+          enteringVariable: iteration.enteringVariable,
+          pivotColumnIndex: iteration.pivotColumnIndex,
+        }),
       },
       {
         id: `ratios-${iteration.iterationNumber}`,
@@ -453,6 +544,15 @@ export const buildSimplexSteps = (
           value: ratio.expression,
           min: ratio.isMinimum,
         })),
+        tableCaption: "Se usan solo coeficientes positivos de la columna pivote",
+        summary: buildStepSummary(iteration.sourceTableau, {
+          status: "Cálculo de razones",
+          reason: `Calculamos las razones LD / ${iteration.enteringVariable} para conservar la factibilidad y detectar la fila pivote.`,
+          enteringVariable: iteration.enteringVariable,
+          pivotColumnIndex: iteration.pivotColumnIndex,
+          leavingVariable: iteration.leavingVariable,
+          pivotRowIndex: iteration.pivotRowIndex,
+        }),
       },
     );
 
@@ -466,6 +566,14 @@ export const buildSimplexSteps = (
         table: tableauToBoard(iteration.sourceTableau, {
           pivotColumnIndex: iteration.pivotColumnIndex,
           ratios,
+        }),
+        tableCaption: "No existe fila pivote válida",
+        summary: buildStepSummary(iteration.sourceTableau, {
+          status: "No acotado",
+          reason:
+            "No hay coeficientes positivos en la columna pivote, así que no existe una variable saliente que mantenga la factibilidad.",
+          enteringVariable: iteration.enteringVariable,
+          pivotColumnIndex: iteration.pivotColumnIndex,
         }),
       });
       break;
@@ -493,6 +601,18 @@ export const buildSimplexSteps = (
           entering: iteration.enteringVariable,
           leaving: iteration.leavingVariable,
         },
+        tableCaption: "La menor razón positiva define la fila pivote",
+        summary: buildStepSummary(iteration.sourceTableau, {
+          status: "Selección de variable saliente",
+          reason:
+            iteration.leavingVariable && iteration.enteringVariable
+              ? `${iteration.leavingVariable} tiene la menor razón positiva en la columna ${iteration.enteringVariable}, por eso sale de la base.`
+              : "La menor razón positiva determina la variable saliente.",
+          enteringVariable: iteration.enteringVariable,
+          leavingVariable: iteration.leavingVariable,
+          pivotColumnIndex: iteration.pivotColumnIndex,
+          pivotRowIndex: iteration.pivotRowIndex,
+        }),
       },
       {
         id: `pivot-${iteration.iterationNumber}`,
@@ -511,6 +631,21 @@ export const buildSimplexSteps = (
           leaving: iteration.leavingVariable,
           pivot: iteration.pivotValue,
         },
+        tableCaption: "El pivote es la intersección entre fila y columna pivote",
+        summary: buildStepSummary(iteration.sourceTableau, {
+          status: "Elemento pivote identificado",
+          reason:
+            iteration.pivotValue !== undefined &&
+            iteration.enteringVariable &&
+            iteration.leavingVariable
+              ? `El pivote es ${formatNumber(iteration.pivotValue)}, ubicado en la fila ${iteration.leavingVariable} y columna ${iteration.enteringVariable}.`
+              : "Se identifica el elemento pivote antes de operar el tablero.",
+          enteringVariable: iteration.enteringVariable,
+          leavingVariable: iteration.leavingVariable,
+          pivotValue: iteration.pivotValue,
+          pivotColumnIndex: iteration.pivotColumnIndex,
+          pivotRowIndex: iteration.pivotRowIndex,
+        }),
       },
       {
         id: `operations-${iteration.iterationNumber}`,
@@ -521,6 +656,28 @@ export const buildSimplexSteps = (
           "Se normaliza la fila pivote y se hacen ceros en el resto de la columna pivote.",
         kind: "operations",
         operations: iteration.rowOperations,
+        comparison: {
+          before: tableauToBoard(iteration.sourceTableau, {
+            pivotColumnIndex: iteration.pivotColumnIndex,
+            pivotRowIndex: iteration.pivotRowIndex,
+            ratios,
+          }),
+          after: tableauToBoard(iteration.resultTableau),
+          beforeCaption: "Tablero antes del pivoteo",
+          afterCaption: "Tablero después del pivoteo",
+        },
+        summary: buildStepSummary(iteration.sourceTableau, {
+          status: "Operaciones de renglón",
+          reason:
+            iteration.pivotValue !== undefined
+              ? `Dividimos la fila pivote entre ${formatNumber(iteration.pivotValue)} y luego hacemos ceros en el resto de la columna pivote.`
+              : "Se actualiza el tablero mediante operaciones elementales de renglón.",
+          enteringVariable: iteration.enteringVariable,
+          leavingVariable: iteration.leavingVariable,
+          pivotValue: iteration.pivotValue,
+          pivotColumnIndex: iteration.pivotColumnIndex,
+          pivotRowIndex: iteration.pivotRowIndex,
+        }),
       },
       {
         id: `new-tableau-${iteration.iterationNumber}`,
@@ -532,6 +689,17 @@ export const buildSimplexSteps = (
           "Se analiza el tablero actualizado.",
         kind: "newTableau",
         table: tableauToBoard(iteration.resultTableau),
+        tableCaption:
+          iteration.status === "optimal"
+            ? "Tablero actualizado y óptimo"
+            : "Tablero actualizado para la siguiente iteración",
+        summary: buildStepSummary(iteration.resultTableau, {
+          status: iteration.status === "optimal" ? "Óptima" : "Factible mejorada",
+          reason:
+            iteration.status === "optimal"
+              ? "Ya no hay coeficientes negativos en la fila Z, así que el método se detiene con una solución óptima."
+              : "La base se actualizó, pero todavía quedan coeficientes negativos en la fila Z.",
+        }),
       },
     );
   }
@@ -546,6 +714,14 @@ export const buildSimplexSteps = (
     table:
       result.iterations.length > 0
         ? tableauToBoard(result.iterations[result.iterations.length - 1].resultTableau)
+        : undefined,
+    tableCaption: "Tablero final",
+    summary:
+      result.iterations.length > 0
+        ? buildStepSummary(result.iterations[result.iterations.length - 1].resultTableau, {
+            status: result.status === "optimal" ? "Óptima" : "Estado final",
+            reason: result.message,
+          })
         : undefined,
   });
 

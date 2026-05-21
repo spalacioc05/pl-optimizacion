@@ -22,9 +22,9 @@ export function SimplexBoard({ table, caption }: Props) {
         </div>
       )}
       <div className="scrollbar-thin overflow-x-auto">
-        <table className="w-full min-w-[480px] border-collapse text-sm">
+        <table className="w-full min-w-120 border-collapse text-sm">
           <thead>
-            <tr className="bg-gradient-to-r from-primary/5 to-accent/5">
+            <tr className="bg-linear-to-r from-primary/5 to-accent/5">
               {table.headers.map((h, i) => (
                 <th
                   key={h}
@@ -50,7 +50,7 @@ export function SimplexBoard({ table, caption }: Props) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: ri * 0.04 }}
                   className={`${isZ ? "bg-secondary/40 font-semibold" : ri % 2 ? "bg-surface-alt/60" : ""} ${
-                    isPivotRow ? "!bg-pivot-row" : ""
+                    isPivotRow ? "bg-pivot-row!" : ""
                   } border-t border-border/60`}
                 >
                   <td
@@ -65,12 +65,13 @@ export function SimplexBoard({ table, caption }: Props) {
                     const isPivot =
                       isPivotRow && table.pivotCol !== undefined && ci === table.pivotCol;
                     const isRatioCell = ci === row.values.length - 1;
+                    const isNegativeZCell = isZ && table.negativeColumns?.includes(ci);
                     return (
                       <td
                         key={ci}
                         className={`px-3 py-2.5 text-center font-mono text-sm tabular-nums ${
                           isPivotCol && !isPivotRow ? "bg-pivot-col/60" : ""
-                        } ${isPivot ? "!bg-pivot font-bold text-primary-dark ring-2 ring-inset ring-primary" : ""} ${
+                        } ${isNegativeZCell ? "bg-destructive/10 text-destructive" : ""} ${isPivot ? "bg-pivot! font-bold text-primary-dark ring-2 ring-inset ring-primary" : ""} ${
                           isRatioCell && isPivotRow
                             ? "bg-optimal/80 font-semibold text-primary-dark"
                             : ""
