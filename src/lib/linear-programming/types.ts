@@ -97,6 +97,63 @@ export interface SimplexResult {
   augmentedConstraints: string[];
 }
 
+export interface SensitivityConstraintRow {
+  constraint: string;
+  rhs: number;
+  slack: number;
+  status: string;
+  interpretation: string;
+}
+
+export interface SensitivityReducedCostRow {
+  variable: string;
+  finalValue: number;
+  reducedCost: number;
+  status: string;
+  interpretation: string;
+}
+
+export interface SensitivityShadowPriceRow {
+  constraint: string;
+  shadowPrice: number;
+  slack: number;
+  status: string;
+  interpretation: string;
+}
+
+export interface SensitivityObjectiveRangeRow {
+  variable: string;
+  currentCoefficient: number;
+  allowableIncrease: string;
+  allowableDecrease: string;
+  status: string;
+}
+
+export interface SensitivityRhsRangeRow {
+  constraint: string;
+  rhs: number;
+  allowableIncrease: string;
+  allowableDecrease: string;
+  status: string;
+}
+
+export interface SensitivityAnalysis {
+  available: boolean;
+  message?: string;
+  optimalValue: number;
+  basicVariables: string[];
+  nonBasicVariables: string[];
+  slackVariables: Array<{ variable: string; value: number }>;
+  activeConstraints: string[];
+  inactiveConstraints: string[];
+  constraintRows: SensitivityConstraintRow[];
+  reducedCostRows: SensitivityReducedCostRow[];
+  shadowPriceRows: SensitivityShadowPriceRow[];
+  objectiveRangeRows: SensitivityObjectiveRangeRow[];
+  rhsRangeRows: SensitivityRhsRangeRow[];
+  notes: string[];
+}
+
 export type SolverStepKind =
   | "model"
   | "augmented"

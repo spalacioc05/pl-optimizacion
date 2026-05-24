@@ -4,12 +4,10 @@ import type {
   GraphicalLine,
   GraphicalResult,
   GraphicalVertex,
-  LinearProgrammingProblem,
 } from "@/lib/linear-programming/types";
 import { EPSILON, formatNumber } from "@/lib/linear-programming/utils";
 
 interface GraphicalPlaneProps {
-  problem: LinearProgrammingProblem;
   result: GraphicalResult;
   activeStageIndex: number;
   compact?: boolean;
@@ -111,12 +109,7 @@ const buildHalfPlanePolygon = (
 const getVertexTooltip = (vertex: GraphicalVertex) =>
   `(${formatNumber(vertex.x)}, ${formatNumber(vertex.y)}), Z = ${formatNumber(vertex.z)}`;
 
-export function GraphicalPlane({
-  problem,
-  result,
-  activeStageIndex,
-  compact = false,
-}: GraphicalPlaneProps) {
+export function GraphicalPlane({ result, activeStageIndex, compact = false }: GraphicalPlaneProps) {
   const width = compact ? 360 : 920;
   const height = compact ? 280 : 660;
   const padding = compact
@@ -137,7 +130,6 @@ export function GraphicalPlane({
   const showVertices = rank >= 3;
   const showVertexValues = rank >= 4;
   const showObjective = rank >= 5;
-  const showDirection = rank >= 6;
   const showOptimal = rank >= 7;
   const [hover, setHover] = useState<{ x: number; y: number; label: string } | null>(null);
 
@@ -183,27 +175,6 @@ export function GraphicalPlane({
   const visibleLevelLines = result.levelLines.filter((levelLine) =>
     revealedLevelIds.has(levelLine.id),
   );
-
-  const directionArrow = useMemo(() => {
-    if (!result.optimalVertex) {
-      return null;
-    }
-
-    const dx = problem.objectiveCoefficients[0];
-    const dy = problem.objectiveCoefficients[1];
-    const magnitude = Math.sqrt(dx * dx + dy * dy) || 1;
-    const normalizedX = dx / magnitude;
-    const normalizedY = dy / magnitude;
-    const startX = Math.max(result.optimalVertex.x - result.xMax * 0.18, result.xMax * 0.2);
-    const startY = Math.max(result.optimalVertex.y - result.yMax * 0.16, result.yMax * 0.16);
-    const endX = startX + normalizedX * Math.min(result.xMax * 0.2, 2.8);
-    const endY = startY + normalizedY * Math.min(result.yMax * 0.2, 2.8);
-
-    return {
-      start: { x: startX, y: startY },
-      end: { x: endX, y: endY },
-    };
-  }, [problem.objectiveCoefficients, result.optimalVertex, result.xMax, result.yMax]);
 
   return (
     <div className={`relative w-full ${compact ? "h-70" : "h-105 sm:h-130 lg:h-145 xl:h-165"}`}>
@@ -480,8 +451,7 @@ export function GraphicalPlane({
           {showObjective
             ? visibleLevelLines.map((levelLine, index) => {
                 const isActive =
-                  activeLevel?.id === levelLine.id ||
-                  (showDirection && index === visibleLevelLines.length - 1);
+                  activeLevel?.id === levelLine.id || index === visibleLevelLines.length - 1;
                 return (
                   <g key={levelLine.id}>
                     <motion.line
@@ -523,38 +493,6 @@ export function GraphicalPlane({
                 );
               })
             : null}
-
-          {showDirection && directionArrow ? (
-            <g>
-              <motion.line
-                x1={sx(directionArrow.start.x)}
-                y1={sy(directionArrow.start.y)}
-                x2={sx(directionArrow.end.x)}
-                y2={sy(directionArrow.end.y)}
-                stroke="#0f766e"
-                strokeWidth={2.4}
-                strokeLinecap="round"
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 0.55 }}
-              />
-              <polygon
-                points={`${sx(directionArrow.end.x)},${sy(directionArrow.end.y)} ${sx(directionArrow.end.x - 0.32)},${sy(directionArrow.end.y - 0.15)} ${sx(directionArrow.end.x - 0.1)},${sy(directionArrow.end.y - 0.35)}`}
-                fill="#0f766e"
-              />
-              {!compact ? (
-                <text
-                  x={sx(directionArrow.end.x) + 8}
-                  y={sy(directionArrow.end.y) - 8}
-                  fontSize="12"
-                  fill="#0f766e"
-                  fontWeight={700}
-                >
-                  Dirección de maximización
-                </text>
-              ) : null}
-            </g>
-          ) : null}
 
           {showOptimal && result.optimalVertex ? (
             <motion.g

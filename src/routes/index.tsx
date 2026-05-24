@@ -5,6 +5,7 @@ import { GraphicalMethodSection } from "@/components/graphical/GraphicalMethodSe
 import { Header } from "@/components/layout/Header";
 import { ExampleSelector } from "@/components/examples/ExampleSelector";
 import { LinearModelForm } from "@/components/forms/LinearModelForm";
+import { SensitivityAnalysisSection } from "../components/results/SensitivityAnalysisSection";
 import { StepByStepPlayer } from "@/components/steps/StepByStepPlayer";
 import { SolutionShowcase } from "@/components/results/SolutionShowcase";
 import { FloatingStepControls } from "@/components/layout/FloatingStepControls";
@@ -125,7 +126,7 @@ function Index() {
     <div className="min-h-screen pb-32">
       <Header />
 
-      <main className="mx-auto max-w-[1440px] px-3 py-4 sm:px-6 sm:py-6">
+      <main className="mx-auto max-w-360 px-3 py-4 sm:px-6 sm:py-6">
         <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
           {/* Left column */}
           <aside className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:pr-1 scrollbar-thin">
@@ -142,15 +143,43 @@ function Index() {
             <LinearModelForm
               draft={draft}
               errors={errors}
-              onVariableCountChange={(value) => {
+              onAddVariable={() => {
                 setSelectedId(null);
                 setPlaying(false);
-                setDraft((current) => resizeDraft(current, value, current.constraintCount));
+                setDraft((current) =>
+                  resizeDraft(current, current.variableCount + 1, current.constraintCount),
+                );
               }}
-              onConstraintCountChange={(value) => {
+              onRemoveVariable={() => {
                 setSelectedId(null);
                 setPlaying(false);
-                setDraft((current) => resizeDraft(current, current.variableCount, value));
+                setDraft((current) =>
+                  resizeDraft(current, current.variableCount - 1, current.constraintCount),
+                );
+              }}
+              onAddConstraint={() => {
+                setSelectedId(null);
+                setPlaying(false);
+                setDraft((current) =>
+                  resizeDraft(current, current.variableCount, current.constraintCount + 1),
+                );
+              }}
+              onRemoveConstraint={(rowIndex) => {
+                setSelectedId(null);
+                setPlaying(false);
+                setDraft((current) => ({
+                  ...resizeDraft(current, current.variableCount, current.constraintCount - 1),
+                  constraints: current.constraints
+                    .filter((_, currentRowIndex) => currentRowIndex !== rowIndex)
+                    .map((constraint) => ({
+                      ...constraint,
+                      coefficients: Array.from(
+                        { length: current.variableCount },
+                        (_, columnIndex) => constraint.coefficients[columnIndex] ?? "",
+                      ),
+                    })),
+                  constraintCount: Math.max(1, current.constraintCount - 1),
+                }));
               }}
               onObjectiveChange={(index, value) => {
                 setSelectedId(null);
@@ -215,7 +244,8 @@ function Index() {
                     id: "manual-problem",
                     name: "Problema manual",
                     description: "Modelo ingresado y resuelto manualmente por el usuario.",
-                    interpretation: undefined,
+                    interpretation:
+                      "El resultado corresponde a un modelo ingresado manualmente y resuelto con el flujo actual del aplicativo.",
                   });
                 }
                 setCurrentStep(0);
@@ -239,7 +269,7 @@ function Index() {
           <div className="space-y-5">
             {solvedProblem && simplexResult && solvedModel ? (
               <>
-                <GraphicalMethodSection problem={solvedProblem} result={graphicalResult} />
+                <GraphicalMethodSection result={graphicalResult} />
 
                 <StepByStepPlayer
                   model={solvedModel}
@@ -250,11 +280,12 @@ function Index() {
                 />
 
                 <SolutionShowcase
-                  model={solvedModel}
                   result={simplexResult}
                   graphicalResult={graphicalResult}
                   interpretation={solvedMeta.interpretation}
                 />
+
+                <SensitivityAnalysisSection problem={solvedProblem} result={simplexResult} />
               </>
             ) : (
               <motion.section

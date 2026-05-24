@@ -4,8 +4,10 @@ import type { LinearProgrammingDraft } from "@/lib/linear-programming/types";
 interface Props {
   draft: LinearProgrammingDraft;
   errors: string[];
-  onVariableCountChange: (value: number) => void;
-  onConstraintCountChange: (value: number) => void;
+  onAddVariable: () => void;
+  onRemoveVariable: () => void;
+  onAddConstraint: () => void;
+  onRemoveConstraint: (rowIndex: number) => void;
   onObjectiveChange: (index: number, value: string) => void;
   onConstraintCoefficientChange: (rowIndex: number, columnIndex: number, value: string) => void;
   onConstraintRhsChange: (rowIndex: number, value: string) => void;
@@ -24,11 +26,34 @@ function CoefInput({ value, onChange }: { value: string; onChange: (value: strin
   );
 }
 
+function ActionButton({
+  label,
+  onClick,
+  disabled = false,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex items-center justify-center rounded-xl bg-surface px-3 py-2 text-xs font-semibold text-foreground shadow-elevation-1 transition-all hover:-translate-y-0.5 hover:shadow-elevation-2 disabled:cursor-not-allowed disabled:opacity-45"
+    >
+      {label}
+    </button>
+  );
+}
+
 export function LinearModelForm({
   draft,
   errors,
-  onVariableCountChange,
-  onConstraintCountChange,
+  onAddVariable,
+  onRemoveVariable,
+  onAddConstraint,
+  onRemoveConstraint,
   onObjectiveChange,
   onConstraintCoefficientChange,
   onConstraintRhsChange,
@@ -47,50 +72,83 @@ export function LinearModelForm({
       </div>
 
       {/* Config */}
-      <div className="mb-4 grid grid-cols-3 gap-2">
-        <div className="rounded-xl bg-surface-alt p-2.5">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Variables
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="rounded-2xl bg-surface-alt p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Variables
+              </div>
+              <div className="mt-1 font-mono text-2xl font-bold text-primary-dark">
+                {draft.variableCount}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <ActionButton label="Agregar variable" onClick={onAddVariable} />
+              <ActionButton
+                label="Quitar variable"
+                onClick={onRemoveVariable}
+                disabled={draft.variableCount <= 1}
+              />
+            </div>
           </div>
-          <input
-            type="number"
-            min="1"
-            value={draft.variableCount}
-            onChange={(event) => onVariableCountChange(Number(event.target.value))}
-            className="mt-1 h-9 w-full rounded-lg border border-input bg-surface px-3 font-mono text-base font-semibold text-primary-dark outline-none transition-all focus:border-primary focus:ring-2 focus:ring-ring/40"
-          />
         </div>
-        <div className="rounded-xl bg-surface-alt p-2.5">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Restricciones
+        <div className="rounded-2xl bg-surface-alt p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Restricciones
+              </div>
+              <div className="mt-1 font-mono text-2xl font-bold text-primary-dark">
+                {draft.constraintCount}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <ActionButton label="Agregar restricción" onClick={onAddConstraint} />
+              <div className="rounded-xl bg-surface px-3 py-2 text-center text-xs font-semibold text-muted-foreground">
+                Quitar desde cada card
+              </div>
+            </div>
           </div>
-          <input
-            type="number"
-            min="1"
-            value={draft.constraintCount}
-            onChange={(event) => onConstraintCountChange(Number(event.target.value))}
-            className="mt-1 h-9 w-full rounded-lg border border-input bg-surface px-3 font-mono text-base font-semibold text-primary-dark outline-none transition-all focus:border-primary focus:ring-2 focus:ring-ring/40"
-          />
         </div>
-        <div className="rounded-xl bg-surface-alt p-2.5">
+        <div className="rounded-2xl bg-surface-alt p-3 sm:col-span-2 xl:col-span-1">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Tipo
           </div>
-          <div className="mt-1 rounded-lg bg-surface px-3 py-2 text-sm font-semibold text-primary-dark">
+          <div className="mt-1 rounded-xl bg-surface px-3 py-2 text-sm font-semibold text-primary-dark">
             Maximización con restricciones ≤
+          </div>
+          <div className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            Forma básica antes de pasar a forma aumentada. Variables no negativas y lados derechos
+            mayores o iguales a cero.
           </div>
         </div>
       </div>
 
-      {/* Objective */}
-      <div className="mb-4 rounded-2xl bg-gradient-to-br from-secondary/40 to-surface-alt p-3.5">
-        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-primary-dark">
-          Función objetivo
+      {draft.variableCount !== 2 ? (
+        <div className="mb-4 rounded-2xl border border-accent/20 bg-accent/5 p-3 text-sm text-primary-dark">
+          El método gráfico requiere exactamente dos variables. Si agregas una tercera variable, la
+          resolución seguirá por Simplex tabular.
         </div>
-        <div className="flex flex-wrap items-center gap-2 font-mono text-sm">
+      ) : null}
+
+      {/* Objective */}
+      <div className="mb-4 rounded-3xl bg-linear-to-br from-secondary/40 to-surface-alt p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-primary-dark">
+            Función objetivo
+          </div>
+          <div className="rounded-full bg-surface px-3 py-1 font-mono text-[11px] font-semibold text-primary-dark">
+            Configuración del modelo
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 font-mono text-sm leading-loose">
           <span className="font-semibold text-primary">Max Z =</span>
           {draft.objectiveCoefficients.map((coefficient, index) => (
-            <span key={index} className="flex items-center gap-2">
+            <span
+              key={index}
+              className="flex items-center gap-2 rounded-2xl bg-surface/85 px-2.5 py-2 shadow-elevation-1"
+            >
               {index > 0 && <span className="text-muted-foreground">+</span>}
               <CoefInput
                 value={coefficient}
@@ -103,38 +161,63 @@ export function LinearModelForm({
       </div>
 
       {/* Constraints */}
-      <div className="mb-4 rounded-2xl bg-surface-alt p-3.5">
-        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Restricciones
+      <div className="mb-4 rounded-3xl bg-surface-alt p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Restricciones
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground/80">
+              Cada restricción se mantiene sincronizada con el número actual de variables.
+            </div>
+          </div>
+          <ActionButton label="Agregar restricción" onClick={onAddConstraint} />
         </div>
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {draft.constraints.map((constraint, rowIndex) => (
             <motion.div
               key={rowIndex}
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: rowIndex * 0.04 }}
-              className="flex flex-wrap items-center gap-2 font-mono text-sm"
+              className="rounded-2xl bg-surface p-3 shadow-elevation-1"
             >
-              {constraint.coefficients.map((coefficient, columnIndex) => (
-                <span key={columnIndex} className="flex items-center gap-2">
-                  {columnIndex > 0 && <span className="text-muted-foreground">+</span>}
-                  <CoefInput
-                    value={coefficient}
-                    onChange={(value) =>
-                      onConstraintCoefficientChange(rowIndex, columnIndex, value)
-                    }
-                  />
-                  <span>{`X${columnIndex + 1}`}</span>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Restricción {rowIndex + 1}
+                </div>
+                <ActionButton
+                  label="Quitar"
+                  onClick={() => onRemoveConstraint(rowIndex)}
+                  disabled={draft.constraintCount <= 1}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2 font-mono text-sm leading-loose">
+                {constraint.coefficients.map((coefficient, columnIndex) => (
+                  <span
+                    key={columnIndex}
+                    className="flex items-center gap-2 rounded-2xl bg-surface-alt px-2.5 py-2"
+                  >
+                    {columnIndex > 0 && <span className="text-muted-foreground">+</span>}
+                    <CoefInput
+                      value={coefficient}
+                      onChange={(value) =>
+                        onConstraintCoefficientChange(rowIndex, columnIndex, value)
+                      }
+                    />
+                    <span>{`X${columnIndex + 1}`}</span>
+                  </span>
+                ))}
+                <span className="rounded-xl bg-secondary px-3 py-2 font-semibold text-secondary-foreground">
+                  ≤
                 </span>
-              ))}
-              <span className="rounded-md bg-secondary px-2 py-1 font-semibold text-secondary-foreground">
-                ≤
-              </span>
-              <CoefInput
-                value={constraint.rhs}
-                onChange={(value) => onConstraintRhsChange(rowIndex, value)}
-              />
+                <span className="rounded-2xl bg-surface-alt px-2.5 py-2">
+                  <CoefInput
+                    value={constraint.rhs}
+                    onChange={(value) => onConstraintRhsChange(rowIndex, value)}
+                  />
+                </span>
+              </div>
             </motion.div>
           ))}
           <div className="mt-2 text-[11px] text-muted-foreground">
@@ -182,6 +265,11 @@ export function LinearModelForm({
           </svg>
           Resolver con Método Simplex
         </motion.button>
+      </div>
+
+      <div className="mt-3 text-xs leading-relaxed text-muted-foreground">
+        Acciones: agrega o elimina variables y restricciones manteniendo coherencia automática en el
+        modelo antes de resolver.
       </div>
     </section>
   );

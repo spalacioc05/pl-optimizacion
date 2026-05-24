@@ -72,43 +72,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
+      { title: "Solver de Programación Lineal" },
       {
         name: "description",
         content:
-          "Simplex Visualizer offers an interactive, step-by-step educational experience for solving linear programming problems.",
+          "Aplicativo académico para formular, resolver y visualizar problemas de Programación Lineal con Simplex tabular, método gráfico y análisis de sensibilidad.",
       },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
+      { name: "author", content: "Universidad de Antioquia" },
+      { property: "og:title", content: "Solver de Programación Lineal" },
       {
         property: "og:description",
         content:
-          "Simplex Visualizer offers an interactive, step-by-step educational experience for solving linear programming problems.",
+          "Aplicativo académico para formular, resolver y visualizar problemas de Programación Lineal con Simplex tabular, método gráfico y análisis de sensibilidad.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Lovable App" },
+      { name: "twitter:title", content: "Solver de Programación Lineal" },
       {
         name: "twitter:description",
         content:
-          "Simplex Visualizer offers an interactive, step-by-step educational experience for solving linear programming problems.",
-      },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ce7d2737-aa22-447b-a4fe-34276493d019/id-preview-0aed6e25--80c4d068-fb23-4df7-aae0-8d5d105d85c7.lovable.app-1779372476486.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ce7d2737-aa22-447b-a4fe-34276493d019/id-preview-0aed6e25--80c4d068-fb23-4df7-aae0-8d5d105d85c7.lovable.app-1779372476486.png",
+          "Aplicativo académico para formular, resolver y visualizar problemas de Programación Lineal con Simplex tabular, método gráfico y análisis de sensibilidad.",
       },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Cpath d='M14 46V18M14 46H50M20 40l9-14 8 7 11-15' fill='none' stroke='%23ffffff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
       },
     ],
   }),

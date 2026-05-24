@@ -3,11 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { GraphicalPlane } from "@/components/graphical/GraphicalPlane";
 import { GraphLegend } from "@/components/graphical/GraphLegend";
 import { VertexEvaluationTable } from "@/components/graphical/VertexEvaluationTable";
-import type { GraphicalResult, LinearProgrammingProblem } from "@/lib/linear-programming/types";
+import type { GraphicalResult } from "@/lib/linear-programming/types";
 import { formatNumber } from "@/lib/linear-programming/utils";
 
 interface GraphicalMethodSectionProps {
-  problem: LinearProgrammingProblem;
   result: GraphicalResult;
 }
 
@@ -42,7 +41,7 @@ function GraphControlButton({
   );
 }
 
-export function GraphicalMethodSection({ problem, result }: GraphicalMethodSectionProps) {
+export function GraphicalMethodSection({ result }: GraphicalMethodSectionProps) {
   const [currentStage, setCurrentStage] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -145,7 +144,6 @@ export function GraphicalMethodSection({ problem, result }: GraphicalMethodSecti
         <div className="space-y-4">
           <div className="md-surface overflow-hidden p-2 sm:p-3 lg:p-4">
             <GraphicalPlane
-              problem={problem}
               result={result}
               activeStageIndex={showAll ? totalStages - 1 : currentStage}
             />

@@ -62,6 +62,12 @@ export function ExampleCard({ model, selected, onSelect }: Props) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+        <span className="rounded-md bg-secondary px-2 py-0.5 font-medium text-secondary-foreground">
+          {model.variables.length} {model.variables.length === 1 ? "variable" : "variables"}
+        </span>
+        <span className="rounded-md bg-surface-alt px-2 py-0.5 font-medium text-muted-foreground">
+          {model.variables.length === 2 ? "Gráfico + Simplex" : "Solo Simplex"}
+        </span>
         <span className="rounded-md bg-optimal px-2 py-0.5 font-mono text-primary-dark">
           {buildExpectedSummary(model)}
         </span>
@@ -71,6 +77,12 @@ export function ExampleCard({ model, selected, onSelect }: Props) {
           </span>
         ))}
       </div>
+
+      {model.variables.length !== 2 ? (
+        <div className="mt-3 rounded-xl border border-accent/20 bg-accent/5 px-3 py-2 text-xs text-primary-dark">
+          El método gráfico solo está disponible para problemas con dos variables de decisión.
+        </div>
+      ) : null}
 
       <div className="mt-3 flex items-center justify-between">
         <span className="text-[11px] font-medium text-muted-foreground">

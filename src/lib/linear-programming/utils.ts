@@ -136,13 +136,15 @@ export const problemToModel = (
 });
 
 const parseNumericArray = (values: string[], errorMessage: string, errors: string[]): number[] => {
-  const parsed = values.map((value) => Number(value));
+  const hasInvalidValue = values.some(
+    (value) => value.trim() === "" || Number.isNaN(Number(value)),
+  );
 
-  if (parsed.some((value) => Number.isNaN(value))) {
+  if (hasInvalidValue) {
     errors.push(errorMessage);
   }
 
-  return parsed;
+  return values.map((value) => (value.trim() === "" ? 0 : Number(value)));
 };
 
 export const validateDraft = (draft: LinearProgrammingDraft): ValidationResult => {
@@ -153,16 +155,30 @@ export const validateDraft = (draft: LinearProgrammingDraft): ValidationResult =
   }
 
   if (draft.variableCount < 1) {
-    errors.push("El número de variables debe ser mayor o igual a 1.");
+    errors.push("Debe existir al menos una variable.");
   }
 
   if (draft.constraintCount < 1) {
-    errors.push("El número de restricciones debe ser mayor o igual a 1.");
+    errors.push("Debe existir al menos una restricción.");
+  }
+
+  if (draft.objectiveCoefficients.length !== draft.variableCount) {
+    errors.push("Todos los coeficientes deben mantenerse coherentes con el número de variables.");
+  }
+
+  if (draft.constraints.length !== draft.constraintCount) {
+    errors.push("Debe existir al menos una restricción.");
+  }
+
+  if (
+    draft.constraints.some((constraint) => constraint.coefficients.length !== draft.variableCount)
+  ) {
+    errors.push("Todos los coeficientes deben mantenerse coherentes con el número de variables.");
   }
 
   const objectiveCoefficients = parseNumericArray(
     draft.objectiveCoefficients,
-    "Todos los coeficientes de la función objetivo deben ser numéricos.",
+    "Todos los coeficientes deben ser numéricos.",
     errors,
   );
 
@@ -172,12 +188,11 @@ export const validateDraft = (draft: LinearProgrammingDraft): ValidationResult =
       `Todos los coeficientes de la restricción ${rowIndex + 1} deben ser numéricos.`,
       errors,
     );
-    const rhs = Number(constraint.rhs);
+    const rhs = constraint.rhs.trim() === "" ? Number.NaN : Number(constraint.rhs);
 
     if (Number.isNaN(rhs)) {
       errors.push(`El lado derecho de la restricción ${rowIndex + 1} debe ser numérico.`);
     } else if (rhs < 0) {
-      errors.push(sprintScopeMessage);
       errors.push(
         `El lado derecho de la restricción ${rowIndex + 1} debe ser mayor o igual a cero.`,
       );

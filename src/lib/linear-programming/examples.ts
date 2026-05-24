@@ -62,4 +62,44 @@ export const exampleModels: ExampleModel[] = [
     interpretation:
       "El óptimo se obtiene en X1 = 3 y X2 = 1.5, con Z = 21. Las restricciones 1 y 2 quedan activas, mientras las restricciones 3 y 4 conservan holguras positivas.",
   },
+  {
+    id: "mesas-sillas",
+    name: "Producción de mesas y sillas",
+    description:
+      "Modelo de producción con dos variables para comparar solución tabular, gráfica y sensibilidad de recursos.",
+    variables: ["X1", "X2"],
+    objective: { type: "max", coefficients: [40, 30] },
+    constraints: [
+      { coefficients: [2, 1], operator: "<=", rhs: 100 },
+      { coefficients: [1, 1], operator: "<=", rhs: 80 },
+      { coefficients: [1, 0], operator: "<=", rhs: 40 },
+    ],
+    expectedSolution: {
+      variables: { X1: 20, X2: 60 },
+      slacks: { S1: 0, S2: 0, S3: 20 },
+      z: 2600,
+    },
+    interpretation:
+      "La producción óptima es de 20 mesas y 60 sillas, con utilidad máxima de 2600. Las dos primeras restricciones quedan activas y la tercera conserva 20 unidades disponibles.",
+  },
+  {
+    id: "three-variables-simplex",
+    name: "Ejemplo con tres variables",
+    description:
+      "Caso validado para Simplex tabular donde el método gráfico se desactiva por tener tres variables de decisión.",
+    variables: ["X1", "X2", "X3"],
+    objective: { type: "max", coefficients: [5, 4, 3] },
+    constraints: [
+      { coefficients: [2, 3, 1], operator: "<=", rhs: 5 },
+      { coefficients: [4, 1, 2], operator: "<=", rhs: 11 },
+      { coefficients: [3, 4, 2], operator: "<=", rhs: 8 },
+    ],
+    expectedSolution: {
+      variables: { X1: 2, X2: 0, X3: 1 },
+      slacks: { S1: 0, S2: 1, S3: 0 },
+      z: 13,
+    },
+    interpretation:
+      "El óptimo tabular se alcanza con X1 = 2, X2 = 0 y X3 = 1, obteniendo Z = 13. El método gráfico se oculta porque el modelo no tiene exactamente dos variables de decisión.",
+  },
 ];

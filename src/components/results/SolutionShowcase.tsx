@@ -1,10 +1,9 @@
 import { motion } from "framer-motion";
 import { GraphicalPlane } from "@/components/graphical/GraphicalPlane";
-import type { GraphicalResult, LinearModel, SimplexResult } from "@/lib/linear-programming/types";
+import type { GraphicalResult, SimplexResult } from "@/lib/linear-programming/types";
 import { formatNumber } from "@/lib/linear-programming/utils";
 
 interface Props {
-  model: LinearModel;
   result: SimplexResult;
   graphicalResult: GraphicalResult;
   interpretation?: string;
@@ -40,7 +39,7 @@ function StatCard({
   );
 }
 
-export function SolutionShowcase({ model, result, graphicalResult, interpretation }: Props) {
+export function SolutionShowcase({ result, graphicalResult, interpretation }: Props) {
   const orderedDecisionVariables = Object.entries(result.decisionVariables).sort(
     ([left], [right]) => left.localeCompare(right, "es"),
   );
@@ -116,11 +115,6 @@ export function SolutionShowcase({ model, result, graphicalResult, interpretatio
             <div className="md-surface overflow-hidden p-2">
               {graphicalResult.available ? (
                 <GraphicalPlane
-                  problem={{
-                    optimizationType: model.objective.type,
-                    objectiveCoefficients: model.objective.coefficients,
-                    constraints: model.constraints,
-                  }}
                   result={graphicalResult}
                   activeStageIndex={graphicalResult.stages.length - 1}
                   compact
