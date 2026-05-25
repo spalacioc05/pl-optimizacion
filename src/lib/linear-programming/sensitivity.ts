@@ -71,6 +71,7 @@ export const buildSensitivityAnalysis = (
     const headerIndex = finalTableau.headers.indexOf(variable);
     const reducedCost = roundForDisplay(headerIndex >= 0 ? row0[headerIndex] : 0);
     const isBasic = basicVariables.includes(variable);
+    const isMinimization = problem.optimizationType === "min";
 
     return {
       variable,
@@ -79,9 +80,11 @@ export const buildSensitivityAnalysis = (
       status: isBasic ? "Básica" : "No básica",
       interpretation: isBasic
         ? "Permanece en la base actual y por eso su costo reducido es 0."
-        : Math.abs(reducedCost) < EPSILON
-          ? "Su costo reducido es 0; podría existir un óptimo alterno con la misma base dual."
-          : `Necesitaría mejorar ${reducedCost} unidades su contribución a Z para entrar a la base actual.`,
+        : isMinimization
+          ? "La lectura del costo reducido corresponde al modelo equivalente W = -Z usado por el solver. La interpretación económica directa para la minimización original queda indicada solo como referencia técnica."
+          : Math.abs(reducedCost) < EPSILON
+            ? "Su costo reducido es 0; podría existir un óptimo alterno con la misma base dual."
+            : `Necesitaría mejorar ${reducedCost} unidades su contribución a Z para entrar a la base actual.`,
     };
   });
 
@@ -91,6 +94,7 @@ export const buildSensitivityAnalysis = (
     const slackHeaderIndex = finalTableau.headers.indexOf(`S${index + 1}`);
     const shadowPrice = roundForDisplay(slackHeaderIndex >= 0 ? row0[slackHeaderIndex] : 0);
     const isActive = Math.abs(slack) < EPSILON;
+    const isMinimization = problem.optimizationType === "min";
 
     return {
       constraint: label,
@@ -98,10 +102,14 @@ export const buildSensitivityAnalysis = (
       slack,
       status: isActive ? "Activa" : "Con holgura",
       interpretation: isActive
-        ? Math.abs(shadowPrice) < EPSILON
-          ? "La restricción está activa, pero un cambio marginal no modifica Z en esta base."
-          : `Cada unidad adicional del recurso mejoraría Z en ${shadowPrice}, mientras se mantenga la misma base óptima.`
-        : "La restricción no es limitante en el óptimo y su impacto marginal actual es nulo.",
+        ? isMinimization
+          ? "El valor mostrado proviene del tablero equivalente W = -Z. Se conserva como referencia numérica, pero la interpretación directa del signo para la minimización original se deja pendiente para evitar conclusiones incorrectas."
+          : Math.abs(shadowPrice) < EPSILON
+            ? "La restricción está activa, pero un cambio marginal no modifica Z en esta base."
+            : `Cada unidad adicional del recurso mejoraría Z en ${shadowPrice}, mientras se mantenga la misma base óptima.`
+        : isMinimization
+          ? "La restricción no es limitante y su lectura marginal se mantiene solo como referencia del modelo equivalente transformado."
+          : "La restricción no es limitante en el óptimo y su impacto marginal actual es nulo.",
     };
   });
 
@@ -135,7 +143,12 @@ export const buildSensitivityAnalysis = (
     objectiveRangeRows,
     rhsRangeRows,
     notes: [
-      "Los precios sombra se leen en la fila Z bajo las variables de holgura del tablero final para este modelo de maximización con restricciones <=.",
+      problem.optimizationType === "min"
+        ? "El modelo original se transformó a maximización de -Z; por eso esta lectura base interpreta el tablero óptimo equivalente antes de volver al signo original de la función objetivo."
+        : "Los precios sombra se leen en la fila Z bajo las variables de holgura del tablero final para este modelo de maximización con restricciones <=.",
+      problem.optimizationType === "min"
+        ? "Para minimización, los precios sombra y costos reducidos se muestran como referencia del modelo equivalente W = -Z sin forzar una interpretación económica del signo en el problema original."
+        : "Los costos reducidos y precios sombra se presentan con interpretación operativa directa para el modelo original.",
       "Los rangos permisibles completos quedan preparados en la interfaz, pero su cálculo detallado se deja para una ampliación posterior.",
     ],
   };

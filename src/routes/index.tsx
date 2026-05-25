@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { GraphicalMethodSection } from "@/components/graphical/GraphicalMethodSection";
 import { Header } from "@/components/layout/Header";
 import { ExampleSelector } from "@/components/examples/ExampleSelector";
 import { LinearModelForm } from "@/components/forms/LinearModelForm";
+import { ModelVisualSummarySection } from "@/components/results/ModelVisualSummarySection";
 import { SensitivityAnalysisSection } from "../components/results/SensitivityAnalysisSection";
 import { StepByStepPlayer } from "@/components/steps/StepByStepPlayer";
 import { SolutionShowcase } from "@/components/results/SolutionShowcase";
@@ -12,6 +13,7 @@ import { FloatingStepControls } from "@/components/layout/FloatingStepControls";
 import { exampleModels } from "@/lib/linear-programming/examples";
 import { solveGraphically } from "@/lib/linear-programming/graphical";
 import { buildSimplexSteps, solveSimplex } from "@/lib/linear-programming/simplex";
+import { buildThreeDimensionalVisualization } from "@/lib/linear-programming/visualization";
 import type {
   ExampleModel,
   LinearProgrammingProblem,
@@ -29,6 +31,12 @@ import {
 export const Route = createFileRoute("/")({
   component: Index,
 });
+
+const FeasibleSpace3DSection = lazy(() =>
+  import("@/components/graphical/FeasibleSpace3DSection").then((module) => ({
+    default: module.FeasibleSpace3DSection,
+  })),
+);
 
 function Index() {
   const initialExample = exampleModels[0];
@@ -79,6 +87,14 @@ function Index() {
     [solvedProblem],
   );
   const total = simplexSteps.length;
+  const visualizationDimension = solvedProblem?.objectiveCoefficients.length ?? 0;
+  const threeDimensionalVisualization = useMemo(
+    () =>
+      solvedProblem && simplexResult
+        ? buildThreeDimensionalVisualization(solvedProblem, simplexResult)
+        : null,
+    [simplexResult, solvedProblem],
+  );
 
   const loadSolvedExample = (example: ExampleModel) => {
     const problem = modelToProblem(example);
@@ -127,9 +143,9 @@ function Index() {
       <Header />
 
       <main className="mx-auto max-w-360 px-3 py-4 sm:px-6 sm:py-6">
-        <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(480px,0.82fr)_minmax(0,1.18fr)]">
           {/* Left column */}
-          <aside className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:pr-1 scrollbar-thin">
+          <aside className="min-w-0 space-y-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:pr-1 scrollbar-thin">
             <ExampleSelector
               examples={exampleModels}
               selectedId={selectedId}
@@ -164,6 +180,24 @@ function Index() {
                   resizeDraft(current, current.variableCount, current.constraintCount + 1),
                 );
               }}
+              onRemoveLastConstraint={() => {
+                setSelectedId(null);
+                setPlaying(false);
+                setDraft((current) => {
+                  const nextCount = Math.max(1, current.constraintCount - 1);
+                  return {
+                    ...resizeDraft(current, current.variableCount, nextCount),
+                    constraints: current.constraints.slice(0, nextCount).map((constraint) => ({
+                      ...constraint,
+                      coefficients: Array.from(
+                        { length: current.variableCount },
+                        (_, columnIndex) => constraint.coefficients[columnIndex] ?? "",
+                      ),
+                    })),
+                    constraintCount: nextCount,
+                  };
+                });
+              }}
               onRemoveConstraint={(rowIndex) => {
                 setSelectedId(null);
                 setPlaying(false);
@@ -180,6 +214,11 @@ function Index() {
                     })),
                   constraintCount: Math.max(1, current.constraintCount - 1),
                 }));
+              }}
+              onOptimizationTypeChange={(value) => {
+                setSelectedId(null);
+                setPlaying(false);
+                setDraft((current) => ({ ...current, optimizationType: value }));
               }}
               onObjectiveChange={(index, value) => {
                 setSelectedId(null);
@@ -266,10 +305,29 @@ function Index() {
           </aside>
 
           {/* Right column */}
-          <div className="space-y-5">
+          <div className="min-w-0 space-y-5">
             {solvedProblem && simplexResult && solvedModel ? (
               <>
-                <GraphicalMethodSection result={graphicalResult} />
+                {visualizationDimension === 2 ? (
+                  <GraphicalMethodSection result={graphicalResult} />
+                ) : visualizationDimension === 3 && threeDimensionalVisualization ? (
+                  <Suspense
+                    fallback={
+                      <section className="md-elevated overflow-hidden p-5 sm:p-6">
+                        <div className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                          Visualización 3D del espacio factible
+                        </div>
+                        <p className="mt-3 rounded-2xl bg-surface-alt p-4 text-sm leading-relaxed text-muted-foreground">
+                          Preparando escena 3D del espacio factible...
+                        </p>
+                      </section>
+                    }
+                  >
+                    <FeasibleSpace3DSection visualization={threeDimensionalVisualization} />
+                  </Suspense>
+                ) : visualizationDimension >= 4 ? (
+                  <ModelVisualSummarySection problem={solvedProblem} result={simplexResult} />
+                ) : null}
 
                 <StepByStepPlayer
                   model={solvedModel}
@@ -280,6 +338,7 @@ function Index() {
                 />
 
                 <SolutionShowcase
+                  problem={solvedProblem}
                   result={simplexResult}
                   graphicalResult={graphicalResult}
                   interpretation={solvedMeta.interpretation}

@@ -1,9 +1,14 @@
 import { motion } from "framer-motion";
 import { GraphicalPlane } from "@/components/graphical/GraphicalPlane";
-import type { GraphicalResult, SimplexResult } from "@/lib/linear-programming/types";
-import { formatNumber } from "@/lib/linear-programming/utils";
+import type {
+  GraphicalResult,
+  LinearProgrammingProblem,
+  SimplexResult,
+} from "@/lib/linear-programming/types";
+import { formatNumber, getOptimizationOutcomeLabel } from "@/lib/linear-programming/utils";
 
 interface Props {
+  problem: LinearProgrammingProblem;
   result: SimplexResult;
   graphicalResult: GraphicalResult;
   interpretation?: string;
@@ -39,7 +44,9 @@ function StatCard({
   );
 }
 
-export function SolutionShowcase({ result, graphicalResult, interpretation }: Props) {
+export function SolutionShowcase({ problem, result, graphicalResult, interpretation }: Props) {
+  const optimizationLabel = problem.optimizationType === "min" ? "Valor mínimo" : "Valor máximo";
+  const optimizationAction = problem.optimizationType === "min" ? "minimizada" : "maximizada";
   const orderedDecisionVariables = Object.entries(result.decisionVariables).sort(
     ([left], [right]) => left.localeCompare(right, "es"),
   );
@@ -65,14 +72,14 @@ export function SolutionShowcase({ result, graphicalResult, interpretation }: Pr
             Solución óptima
           </span>
           <span className="rounded-full bg-primary px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary-foreground">
-            Máximo global
+            {getOptimizationOutcomeLabel(problem.optimizationType)}
           </span>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Valor óptimo
+              {optimizationLabel}
             </div>
             <div className="font-mono text-6xl font-bold leading-none">
               <span className="text-gradient">Z = {formatNumber(result.optimalValue)}</span>
@@ -94,7 +101,8 @@ export function SolutionShowcase({ result, graphicalResult, interpretation }: Pr
             </div>
 
             <p className="mt-5 rounded-2xl bg-surface-alt p-4 text-sm leading-relaxed text-muted-foreground">
-              La función objetivo alcanza su valor máximo global Z ={" "}
+              La función objetivo queda {optimizationAction} con un{" "}
+              {getOptimizationOutcomeLabel(problem.optimizationType)} Z ={" "}
               <strong className="font-semibold text-foreground">
                 {formatNumber(result.optimalValue)}
               </strong>
@@ -107,21 +115,28 @@ export function SolutionShowcase({ result, graphicalResult, interpretation }: Pr
                   de la región factible.
                 </>
               ) : null}{" "}
+              {result.transformationNote ? `${result.transformationNote} ` : ""}
               {interpretation ?? result.message}
             </p>
           </div>
 
-          <div className="hidden lg:block lg:w-[360px]">
+          <div className="hidden lg:block lg:w-90">
             <div className="md-surface overflow-hidden p-2">
-              {graphicalResult.available ? (
+              {problem.objectiveCoefficients.length === 2 && graphicalResult.available ? (
                 <GraphicalPlane
                   result={graphicalResult}
                   activeStageIndex={graphicalResult.stages.length - 1}
                   compact
                 />
-              ) : (
+              ) : problem.objectiveCoefficients.length === 2 ? (
                 <div className="rounded-2xl bg-surface-alt p-4 text-sm leading-relaxed text-muted-foreground">
                   {graphicalResult.message}
+                </div>
+              ) : (
+                <div className="rounded-2xl bg-surface-alt p-4 text-sm leading-relaxed text-muted-foreground">
+                  {problem.objectiveCoefficients.length === 3
+                    ? "La escena 3D se muestra en la sección principal de visualización para este modelo con tres variables."
+                    : "El resumen visual del modelo sustituye la gráfica cartesiana cuando hay cuatro o más variables."}
                 </div>
               )}
             </div>

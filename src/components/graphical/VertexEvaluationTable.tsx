@@ -20,7 +20,7 @@ export function VertexEvaluationTable({
         Evaluación de vértices factibles
       </div>
       <div className="scrollbar-thin overflow-x-auto">
-        <table className="w-full min-w-[560px] border-collapse text-sm">
+        <table className="w-full min-w-140 border-collapse text-sm">
           <thead>
             <tr className="bg-linear-to-r from-primary/5 to-accent/5">
               <th className="px-3 py-3 text-left font-mono text-xs font-semibold uppercase tracking-wider text-primary-dark">

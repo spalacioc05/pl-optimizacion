@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
+import type { ReactNode } from "react";
 import type { LinearProgrammingDraft } from "@/lib/linear-programming/types";
+import { minimizationTransformationMessage } from "@/lib/linear-programming/utils";
 
 interface Props {
   draft: LinearProgrammingDraft;
@@ -7,7 +9,9 @@ interface Props {
   onAddVariable: () => void;
   onRemoveVariable: () => void;
   onAddConstraint: () => void;
+  onRemoveLastConstraint: () => void;
   onRemoveConstraint: (rowIndex: number) => void;
+  onOptimizationTypeChange: (value: LinearProgrammingDraft["optimizationType"]) => void;
   onObjectiveChange: (index: number, value: string) => void;
   onConstraintCoefficientChange: (rowIndex: number, columnIndex: number, value: string) => void;
   onConstraintRhsChange: (rowIndex: number, value: string) => void;
@@ -30,20 +34,63 @@ function ActionButton({
   label,
   onClick,
   disabled = false,
+  primary = false,
+  className = "",
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  primary?: boolean;
+  className?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center justify-center rounded-xl bg-surface px-3 py-2 text-xs font-semibold text-foreground shadow-elevation-1 transition-all hover:-translate-y-0.5 hover:shadow-elevation-2 disabled:cursor-not-allowed disabled:opacity-45"
+      className={`inline-flex min-h-10 w-full items-center justify-center whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold shadow-elevation-1 transition-all hover:-translate-y-0.5 hover:shadow-elevation-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-45 ${
+        primary ? "gradient-primary text-primary-foreground" : "bg-surface text-foreground"
+      } ${className}`}
     >
       {label}
     </button>
+  );
+}
+
+function OverviewCard({
+  title,
+  value,
+  description,
+  children,
+  className = "",
+  compact = false,
+}: {
+  title: string;
+  value?: string | number;
+  description: string;
+  children: ReactNode;
+  className?: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={`min-w-0 rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-sm ${className}`}
+    >
+      <div className={`flex h-full flex-col gap-4 ${compact ? "min-h-0" : "min-h-[164px]"}`}>
+        <div className="min-w-0 space-y-2">
+          <div className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            {title}
+          </div>
+          {value !== undefined ? (
+            <div className="font-mono text-4xl font-bold leading-none text-primary-dark">
+              {value}
+            </div>
+          ) : null}
+          <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+        </div>
+        <div className="mt-auto min-w-0">{children}</div>
+      </div>
+    </div>
   );
 }
 
@@ -53,7 +100,9 @@ export function LinearModelForm({
   onAddVariable,
   onRemoveVariable,
   onAddConstraint,
+  onRemoveLastConstraint,
   onRemoveConstraint,
+  onOptimizationTypeChange,
   onObjectiveChange,
   onConstraintCoefficientChange,
   onConstraintRhsChange,
@@ -67,68 +116,99 @@ export function LinearModelForm({
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Modelo lineal
           </h2>
-          <p className="text-xs text-muted-foreground/80">Edita coeficientes o usa un ejemplo</p>
+          <p className="text-xs text-muted-foreground/80">
+            Edita la función objetivo, variables y restricciones del problema.
+          </p>
         </div>
       </div>
 
-      {/* Config */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <div className="rounded-2xl bg-surface-alt p-3">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Variables
-              </div>
-              <div className="mt-1 font-mono text-2xl font-bold text-primary-dark">
-                {draft.variableCount}
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <ActionButton label="Agregar variable" onClick={onAddVariable} />
+      <div className="mb-5 space-y-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <OverviewCard
+            title="Variables"
+            value={draft.variableCount}
+            description="Ajusta las variables del modelo."
+          >
+            <div className="flex flex-wrap gap-2">
               <ActionButton
-                label="Quitar variable"
+                label="Agregar"
+                onClick={onAddVariable}
+                primary
+                className="min-w-[110px] flex-1"
+              />
+              <ActionButton
+                label="Quitar"
                 onClick={onRemoveVariable}
                 disabled={draft.variableCount <= 1}
+                className="min-w-[110px] flex-1"
               />
             </div>
-          </div>
-        </div>
-        <div className="rounded-2xl bg-surface-alt p-3">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Restricciones
-              </div>
-              <div className="mt-1 font-mono text-2xl font-bold text-primary-dark">
-                {draft.constraintCount}
-              </div>
+          </OverviewCard>
+
+          <OverviewCard
+            title="Restricciones"
+            value={draft.constraintCount}
+            description="Modifica la cantidad de restricciones del modelo."
+          >
+            <div className="flex flex-wrap gap-2">
+              <ActionButton
+                label="Agregar"
+                onClick={onAddConstraint}
+                primary
+                className="min-w-[110px] flex-1"
+              />
+              <ActionButton
+                label="Quitar"
+                onClick={onRemoveLastConstraint}
+                disabled={draft.constraintCount <= 1}
+                className="min-w-[110px] flex-1"
+              />
             </div>
-            <div className="grid gap-2">
-              <ActionButton label="Agregar restricción" onClick={onAddConstraint} />
-              <div className="rounded-xl bg-surface px-3 py-2 text-center text-xs font-semibold text-muted-foreground">
-                Quitar desde cada card
-              </div>
+          </OverviewCard>
+        </div>
+
+        <OverviewCard
+          title="Tipo de optimización"
+          description="Define si el modelo busca un máximo o un mínimo."
+          compact
+        >
+          <div className="space-y-3 md:flex md:items-center md:justify-between md:gap-4 md:space-y-0">
+            <div className="grid min-w-0 grid-cols-2 gap-2 rounded-2xl bg-surface p-1 shadow-elevation-1 md:flex-1">
+              {(
+                [
+                  { value: "max", label: "Maximizar" },
+                  { value: "min", label: "Minimizar" },
+                ] as const
+              ).map((option) => {
+                const active = draft.optimizationType === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onOptimizationTypeChange(option.value)}
+                    className={`min-w-0 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+                      active
+                        ? "gradient-primary text-primary-foreground shadow-elevation-1"
+                        : "bg-transparent text-muted-foreground hover:bg-surface-alt"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
+            <p className="text-sm leading-relaxed text-muted-foreground md:max-w-72">
+              Forma básica antes de la forma aumentada.
+            </p>
           </div>
-        </div>
-        <div className="rounded-2xl bg-surface-alt p-3 sm:col-span-2 xl:col-span-1">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Tipo
-          </div>
-          <div className="mt-1 rounded-xl bg-surface px-3 py-2 text-sm font-semibold text-primary-dark">
-            Maximización con restricciones ≤
-          </div>
-          <div className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            Forma básica antes de pasar a forma aumentada. Variables no negativas y lados derechos
-            mayores o iguales a cero.
-          </div>
-        </div>
+        </OverviewCard>
       </div>
 
       {draft.variableCount !== 2 ? (
         <div className="mb-4 rounded-2xl border border-accent/20 bg-accent/5 p-3 text-sm text-primary-dark">
-          El método gráfico requiere exactamente dos variables. Si agregas una tercera variable, la
-          resolución seguirá por Simplex tabular.
+          {draft.variableCount === 3
+            ? "El plano cartesiano 2D requiere exactamente dos variables. Con tres variables se activa la visualización 3D del espacio factible."
+            : "La visualización geométrica completa solo está disponible hasta tres variables. Con cuatro o más variables se mostrará un resumen visual algebraico junto con Simplex tabular y sensibilidad."}
         </div>
       ) : null}
 
@@ -143,7 +223,9 @@ export function LinearModelForm({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 font-mono text-sm leading-loose">
-          <span className="font-semibold text-primary">Max Z =</span>
+          <span className="font-semibold text-primary">
+            {draft.optimizationType === "min" ? "Min Z =" : "Max Z ="}
+          </span>
           {draft.objectiveCoefficients.map((coefficient, index) => (
             <span
               key={index}
@@ -271,6 +353,12 @@ export function LinearModelForm({
         Acciones: agrega o elimina variables y restricciones manteniendo coherencia automática en el
         modelo antes de resolver.
       </div>
+
+      {draft.optimizationType === "min" ? (
+        <div className="mt-3 rounded-2xl border border-accent/20 bg-accent/5 p-3 text-sm text-primary-dark">
+          {minimizationTransformationMessage}
+        </div>
+      ) : null}
     </section>
   );
 }

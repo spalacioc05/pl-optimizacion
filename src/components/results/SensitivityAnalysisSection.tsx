@@ -48,7 +48,11 @@ function StatusChip({
         : "bg-surface-alt text-foreground";
 
   return (
-    <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${classes}`}>{label}</span>
+    <span
+      className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${classes}`}
+    >
+      {label}
+    </span>
   );
 }
 
@@ -79,6 +83,15 @@ function ChipRow({ items, emptyLabel }: { items: string[]; emptyLabel: string })
 
 export function SensitivityAnalysisSection({ problem, result }: Props) {
   const analysis = useMemo(() => buildSensitivityAnalysis(problem, result), [problem, result]);
+  const optimalValueLabel = problem.optimizationType === "min" ? "Valor mínimo" : "Valor máximo";
+  const reducedCostsDescription =
+    problem.optimizationType === "min"
+      ? "Se leen desde el tablero óptimo equivalente W = -Z. Para evitar conclusiones falsas, su interpretación se mantiene como referencia técnica del modelo transformado."
+      : "Se leen desde la fila Z del tablero final para las variables de decisión.";
+  const shadowPricesDescription =
+    problem.optimizationType === "min"
+      ? "Se muestran como referencia numérica del modelo equivalente W = -Z. La interpretación directa del signo en la minimización original se deja explícitamente en pausa."
+      : "Impacto marginal de cada recurso bajo la base óptima actual.";
 
   return (
     <motion.section
@@ -92,8 +105,9 @@ export function SensitivityAnalysisSection({ problem, result }: Props) {
             Análisis de sensibilidad
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Lectura base del tablero óptimo para interpretar restricciones activas, holguras, costos
-            reducidos y precios sombra sin inventar rangos que aún no se calcularon.
+            {problem.optimizationType === "min"
+              ? "Lectura base del tablero óptimo equivalente del solver. En minimización se muestran restricciones activas, holguras y referencias técnicas de costos reducidos y precios sombra sin forzar interpretaciones de signo que aún no están desarrolladas."
+              : "Lectura base del tablero óptimo para interpretar restricciones activas, holguras, costos reducidos y precios sombra sin inventar rangos que aún no se calcularon."}
           </p>
         </div>
         <StatusChip
@@ -110,7 +124,7 @@ export function SensitivityAnalysisSection({ problem, result }: Props) {
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <SummaryMetric
-              label="Valor óptimo"
+              label={optimalValueLabel}
               value={`Z = ${formatNumber(analysis.optimalValue)}`}
             />
             <SummaryMetric
@@ -170,15 +184,15 @@ export function SensitivityAnalysisSection({ problem, result }: Props) {
               title="Estado de restricciones"
               description="Comparación entre lado derecho, holgura y lectura operativa del recurso."
             >
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+              <div className="scrollbar-thin overflow-x-auto">
+                <table className="min-w-190 text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="px-2 py-2">Restricción</th>
-                      <th className="px-2 py-2">Lado derecho</th>
-                      <th className="px-2 py-2">Holgura</th>
-                      <th className="px-2 py-2">Estado</th>
-                      <th className="px-2 py-2">Interpretación</th>
+                      <th className="min-w-22 px-2 py-2">Restricción</th>
+                      <th className="min-w-26 px-2 py-2">Lado derecho</th>
+                      <th className="min-w-23 px-2 py-2">Holgura</th>
+                      <th className="min-w-30 px-2 py-2">Estado</th>
+                      <th className="min-w-65 px-2 py-2">Interpretación</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -206,19 +220,16 @@ export function SensitivityAnalysisSection({ problem, result }: Props) {
               </div>
             </SurfaceCard>
 
-            <SurfaceCard
-              title="Costos reducidos"
-              description="Se leen desde la fila Z del tablero final para las variables de decisión."
-            >
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+            <SurfaceCard title="Costos reducidos" description={reducedCostsDescription}>
+              <div className="scrollbar-thin overflow-x-auto">
+                <table className="min-w-195 text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="px-2 py-2">Variable</th>
-                      <th className="px-2 py-2">Valor final</th>
-                      <th className="px-2 py-2">Costo reducido</th>
-                      <th className="px-2 py-2">Estado</th>
-                      <th className="px-2 py-2">Interpretación</th>
+                      <th className="min-w-22 px-2 py-2">Variable</th>
+                      <th className="min-w-26 px-2 py-2">Valor final</th>
+                      <th className="min-w-29 px-2 py-2">Costo reducido</th>
+                      <th className="min-w-30 px-2 py-2">Estado</th>
+                      <th className="min-w-65 px-2 py-2">Interpretación</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -246,19 +257,16 @@ export function SensitivityAnalysisSection({ problem, result }: Props) {
               </div>
             </SurfaceCard>
 
-            <SurfaceCard
-              title="Precios sombra"
-              description="Impacto marginal de cada recurso bajo la base óptima actual."
-            >
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+            <SurfaceCard title="Precios sombra" description={shadowPricesDescription}>
+              <div className="scrollbar-thin overflow-x-auto">
+                <table className="min-w-195 text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="px-2 py-2">Restricción</th>
-                      <th className="px-2 py-2">Precio sombra</th>
-                      <th className="px-2 py-2">Holgura</th>
-                      <th className="px-2 py-2">Estado</th>
-                      <th className="px-2 py-2">Interpretación</th>
+                      <th className="min-w-22 px-2 py-2">Restricción</th>
+                      <th className="min-w-29 px-2 py-2">Precio sombra</th>
+                      <th className="min-w-23 px-2 py-2">Holgura</th>
+                      <th className="min-w-30 px-2 py-2">Estado</th>
+                      <th className="min-w-65 px-2 py-2">Interpretación</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -292,15 +300,15 @@ export function SensitivityAnalysisSection({ problem, result }: Props) {
               title="Rangos permisibles de la función objetivo"
               description="Estructura preparada para completar los intervalos de sensibilidad de coeficientes."
             >
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+              <div className="scrollbar-thin overflow-x-auto">
+                <table className="min-w-180 text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                       <th className="px-2 py-2">Variable</th>
                       <th className="px-2 py-2">Coeficiente actual</th>
                       <th className="px-2 py-2">Aumento permisible</th>
                       <th className="px-2 py-2">Disminución permisible</th>
-                      <th className="px-2 py-2">Estado</th>
+                      <th className="min-w-35 px-2 py-2">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -328,15 +336,15 @@ export function SensitivityAnalysisSection({ problem, result }: Props) {
               title="Rangos permisibles del lado derecho"
               description="Base lista para extender el análisis sobre cambios en los recursos disponibles."
             >
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+              <div className="scrollbar-thin overflow-x-auto">
+                <table className="min-w-180 text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                       <th className="px-2 py-2">Restricción</th>
                       <th className="px-2 py-2">RHS actual</th>
                       <th className="px-2 py-2">Aumento permisible</th>
                       <th className="px-2 py-2">Disminución permisible</th>
-                      <th className="px-2 py-2">Estado</th>
+                      <th className="min-w-35 px-2 py-2">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -363,6 +371,10 @@ export function SensitivityAnalysisSection({ problem, result }: Props) {
           </div>
 
           <div className="mt-4 space-y-2 rounded-2xl bg-surface-alt p-4 text-sm text-muted-foreground">
+            <div>
+              Esta versión base interpreta el tablero óptimo. Los rangos permisibles completos
+              pueden ampliarse posteriormente con cálculo matricial de sensibilidad.
+            </div>
             {analysis.notes.map((note) => (
               <div key={note}>{note}</div>
             ))}

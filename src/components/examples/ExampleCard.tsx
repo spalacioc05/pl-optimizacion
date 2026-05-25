@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import type { ExampleModel } from "@/lib/linear-programming/types";
 import {
-  buildExpectedSummary,
   formatConstraint,
+  formatNumber,
   formatObjectiveFunction,
   modelToProblem,
 } from "@/lib/linear-programming/utils";
@@ -15,6 +15,17 @@ interface Props {
 
 export function ExampleCard({ model, selected, onSelect }: Props) {
   const problem = modelToProblem(model);
+  const visualizationMode =
+    model.variables.length === 2
+      ? "Gráfico 2D + Simplex"
+      : model.variables.length === 3
+        ? "Espacio 3D + Simplex"
+        : "Resumen visual + Simplex";
+  const nonZeroVariables = Object.entries(model.expectedSolution.variables).filter(
+    ([, value]) => Math.abs(value) > 1e-9,
+  );
+  const previewVariables = nonZeroVariables.slice(0, 3);
+  const remainingVariables = nonZeroVariables.length - previewVariables.length;
 
   return (
     <motion.button
@@ -65,22 +76,32 @@ export function ExampleCard({ model, selected, onSelect }: Props) {
         <span className="rounded-md bg-secondary px-2 py-0.5 font-medium text-secondary-foreground">
           {model.variables.length} {model.variables.length === 1 ? "variable" : "variables"}
         </span>
+        <span className="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary-dark">
+          {model.objective.type === "min" ? "Minimización" : "Maximización"}
+        </span>
         <span className="rounded-md bg-surface-alt px-2 py-0.5 font-medium text-muted-foreground">
-          {model.variables.length === 2 ? "Gráfico + Simplex" : "Solo Simplex"}
+          {visualizationMode}
         </span>
         <span className="rounded-md bg-optimal px-2 py-0.5 font-mono text-primary-dark">
-          {buildExpectedSummary(model)}
+          Z = {formatNumber(model.expectedSolution.z)}
         </span>
-        {Object.entries(model.expectedSolution.variables).map(([k, v]) => (
+        {previewVariables.map(([k, v]) => (
           <span key={k} className="rounded-md bg-pivot-col px-2 py-0.5 font-mono">
             {k} = {v}
           </span>
         ))}
+        {remainingVariables > 0 ? (
+          <span className="rounded-md bg-surface-alt px-2 py-0.5 font-medium text-muted-foreground">
+            +{remainingVariables} variables
+          </span>
+        ) : null}
       </div>
 
       {model.variables.length !== 2 ? (
         <div className="mt-3 rounded-xl border border-accent/20 bg-accent/5 px-3 py-2 text-xs text-primary-dark">
-          El método gráfico solo está disponible para problemas con dos variables de decisión.
+          {model.variables.length === 3
+            ? "Este ejemplo activa la visualización 3D del espacio factible en lugar del plano cartesiano 2D."
+            : "La visualización geométrica completa solo está disponible hasta 3 variables. Este ejemplo usa resumen visual algebraico."}
         </div>
       ) : null}
 

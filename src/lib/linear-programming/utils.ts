@@ -13,7 +13,10 @@ import type {
 export const EPSILON = 1e-9;
 
 export const sprintScopeMessage =
-  "Este sprint solo soporta problemas de maximización con restricciones ≤, lado derecho positivo y variables no negativas.";
+  "Esta versión soporta problemas de maximización o minimización con restricciones ≤, lado derecho no negativo y variables no negativas.";
+
+export const minimizationTransformationMessage =
+  "El problema fue ingresado como minimización. Para usar el Simplex tabular actual, se resuelve la maximización equivalente W = -Z. Al final se recupera el valor original de Z.";
 
 export const buildVariableNames = (prefix: "X" | "S", count: number): string[] =>
   Array.from({ length: count }, (_, index) => `${prefix}${index + 1}`);
@@ -96,7 +99,7 @@ export const resizeDraft = (
 export const problemToDraft = (problem: LinearProgrammingProblem): LinearProgrammingDraft => ({
   variableCount: problem.objectiveCoefficients.length,
   constraintCount: problem.constraints.length,
-  optimizationType: "max",
+  optimizationType: problem.optimizationType,
   constraintOperator: "<=",
   objectiveCoefficients: problem.objectiveCoefficients.map((value) => String(value)),
   constraints: problem.constraints.map((constraint) => ({
@@ -124,7 +127,7 @@ export const problemToModel = (
   name: metadata?.name ?? "Problema manual",
   description: metadata?.description ?? "Modelo ingresado manualmente por el usuario.",
   objective: {
-    type: "max",
+    type: problem.optimizationType,
     coefficients: [...problem.objectiveCoefficients],
   },
   variables: buildVariableNames("X", problem.objectiveCoefficients.length),
@@ -150,7 +153,10 @@ const parseNumericArray = (values: string[], errorMessage: string, errors: strin
 export const validateDraft = (draft: LinearProgrammingDraft): ValidationResult => {
   const errors: string[] = [];
 
-  if (draft.optimizationType !== "max" || draft.constraintOperator !== "<=") {
+  if (
+    (draft.optimizationType !== "max" && draft.optimizationType !== "min") ||
+    draft.constraintOperator !== "<="
+  ) {
     errors.push(sprintScopeMessage);
   }
 
@@ -234,12 +240,56 @@ export const validateDraft = (draft: LinearProgrammingDraft): ValidationResult =
     isValid: true,
     errors: [],
     problem: {
-      optimizationType: "max",
+      optimizationType: draft.optimizationType,
       objectiveCoefficients,
       constraints,
     },
   };
 };
+
+export const getOptimizationLabel = (
+  optimizationType: LinearProgrammingProblem["optimizationType"],
+): string => (optimizationType === "min" ? "Min" : "Max");
+
+export const getOptimizationVerb = (
+  optimizationType: LinearProgrammingProblem["optimizationType"],
+): string => (optimizationType === "min" ? "minimizar" : "maximizar");
+
+export const getOptimizationOutcomeLabel = (
+  optimizationType: LinearProgrammingProblem["optimizationType"],
+): string => (optimizationType === "min" ? "mínimo global" : "máximo global");
+
+export const toCanonicalMaximizationProblem = (
+  problem: LinearProgrammingProblem,
+): LinearProgrammingProblem => {
+  const clonedConstraints = problem.constraints.map((constraint) => ({
+    coefficients: [...constraint.coefficients],
+    operator: constraint.operator,
+    rhs: constraint.rhs,
+  }));
+
+  if (problem.optimizationType === "max") {
+    return {
+      optimizationType: "max",
+      objectiveCoefficients: [...problem.objectiveCoefficients],
+      constraints: clonedConstraints,
+    };
+  }
+
+  return {
+    optimizationType: "max",
+    objectiveCoefficients: problem.objectiveCoefficients.map((coefficient) => -coefficient),
+    constraints: clonedConstraints,
+  };
+};
+
+export const mapCanonicalOptimalValueToOriginal = (
+  problem: LinearProgrammingProblem,
+  canonicalOptimalValue: number,
+): number =>
+  problem.optimizationType === "min"
+    ? roundForDisplay(-canonicalOptimalValue)
+    : canonicalOptimalValue;
 
 export const formatTerm = (
   coefficient: number,
@@ -268,7 +318,13 @@ export const formatLinearExpression = (
 
 export const formatObjectiveFunction = (problem: LinearProgrammingProblem): string => {
   const variables = buildVariableNames("X", problem.objectiveCoefficients.length);
-  return `Max Z = ${formatLinearExpression(problem.objectiveCoefficients, variables)}`;
+  return `${getOptimizationLabel(problem.optimizationType)} Z = ${formatLinearExpression(problem.objectiveCoefficients, variables)}`;
+};
+
+export const formatCanonicalObjectiveFunction = (problem: LinearProgrammingProblem): string => {
+  const canonicalProblem = toCanonicalMaximizationProblem(problem);
+  const variables = buildVariableNames("X", canonicalProblem.objectiveCoefficients.length);
+  return `${problem.optimizationType === "min" ? "Max W" : "Max Z"} = ${formatLinearExpression(canonicalProblem.objectiveCoefficients, variables)}`;
 };
 
 export const formatConstraint = (constraint: LinearConstraint): string => {
@@ -286,9 +342,10 @@ const formatEquationTail = (coefficients: number[], variableLabels: string[]): s
 };
 
 export const formatAugmentedObjective = (problem: LinearProgrammingProblem): string => {
-  const variables = buildVariableNames("X", problem.objectiveCoefficients.length);
-  const objectiveTerms = problem.objectiveCoefficients.map((coefficient) => -coefficient);
-  return `Z ${formatEquationTail(objectiveTerms, variables)} = 0`;
+  const canonicalProblem = toCanonicalMaximizationProblem(problem);
+  const variables = buildVariableNames("X", canonicalProblem.objectiveCoefficients.length);
+  const objectiveTerms = canonicalProblem.objectiveCoefficients.map((coefficient) => -coefficient);
+  return `${problem.optimizationType === "min" ? "W" : "Z"} ${formatEquationTail(objectiveTerms, variables)} = 0`;
 };
 
 export const formatAugmentedConstraint = (
@@ -324,13 +381,14 @@ export const getBasicVariableValues = (tableau: SimplexTableau): Record<string, 
 export const buildSolutionInterpretation = (
   decisionVariables: Record<string, number>,
   optimalValue: number,
+  optimizationType: LinearProgrammingProblem["optimizationType"] = "max",
 ): string => {
   const items = Object.entries(decisionVariables)
     .sort(([left], [right]) => left.localeCompare(right, "es"))
     .map(([name, value]) => `${name} = ${formatNumber(value)}`)
     .join(", ");
 
-  return `La solución óptima se alcanza con ${items}, obteniendo Z = ${formatNumber(optimalValue)}.`;
+  return `La solución óptima se alcanza con ${items}, obteniendo un ${getOptimizationOutcomeLabel(optimizationType)} de Z = ${formatNumber(optimalValue)}.`;
 };
 
 export const buildSlackInterpretation = (slackVariables: Record<string, number>): string => {

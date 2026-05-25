@@ -1,10 +1,13 @@
+import type { OptimizationType } from "@/lib/linear-programming/types";
+
 const palette = ["#0891b2", "#14b8a6", "#0f766e", "#7c3aed", "#f59e0b"];
 
 interface GraphLegendProps {
   constraintCount: number;
+  optimizationType: OptimizationType;
 }
 
-export function GraphLegend({ constraintCount }: GraphLegendProps) {
+export function GraphLegend({ constraintCount, optimizationType }: GraphLegendProps) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
       <span className="inline-flex items-center gap-1.5">
@@ -22,7 +25,7 @@ export function GraphLegend({ constraintCount }: GraphLegendProps) {
       ))}
       <span className="inline-flex items-center gap-1.5">
         <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-        Máximo global
+        {optimizationType === "min" ? "Mínimo global" : "Máximo global"}
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-2.5 w-2.5 rounded-full bg-pivot-row ring-2 ring-primary/20" />

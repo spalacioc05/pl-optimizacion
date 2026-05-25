@@ -140,95 +140,121 @@ export function GraphicalMethodSection({ result }: GraphicalMethodSectionProps) 
         </div>
       </div>
 
-      <div className="grid gap-6 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.85fr)_minmax(320px,0.95fr)]">
-        <div className="space-y-4">
-          <div className="md-surface overflow-hidden p-2 sm:p-3 lg:p-4">
-            <GraphicalPlane
-              result={result}
-              activeStageIndex={showAll ? totalStages - 1 : currentStage}
+      <div className="space-y-5 p-4 sm:p-5">
+        <div className="md-surface overflow-hidden p-2 sm:p-3 lg:p-4">
+          <GraphicalPlane
+            result={result}
+            activeStageIndex={showAll ? totalStages - 1 : currentStage}
+          />
+
+          <div className="mt-3 rounded-2xl bg-surface-alt/80 px-3 py-2">
+            <GraphLegend
+              constraintCount={result.lines.length}
+              optimizationType={result.optimizationType}
             />
-
-            <div className="mt-3 rounded-2xl bg-surface-alt/80 px-3 py-2">
-              <GraphLegend constraintCount={result.lines.length} />
-            </div>
           </div>
+        </div>
 
-          <div className="flex justify-center xl:justify-start">
-            <div className="md-floating flex flex-wrap items-center justify-center gap-1.5 px-2.5 py-1.5">
-              <GraphControlButton
-                label="Anterior"
-                onClick={() => {
-                  setCurrentStage((current) => Math.max(0, current - 1));
-                  setPlaying(false);
-                }}
-                disabled={currentStage === 0 && !showAll}
+        <div className="flex justify-center xl:justify-start">
+          <div className="md-floating flex flex-wrap items-center justify-center gap-1.5 px-2.5 py-1.5">
+            <GraphControlButton
+              label="Anterior"
+              onClick={() => {
+                setCurrentStage((current) => Math.max(0, current - 1));
+                setPlaying(false);
+              }}
+              disabled={currentStage === 0 && !showAll}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </GraphControlButton>
+
+            {playing ? (
+              <GraphControlButton label="Pausar" onClick={() => setPlaying(false)} primary>
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+                  <rect x="7" y="5" width="3.5" height="14" rx="1" />
+                  <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
                 </svg>
               </GraphControlButton>
-
-              {playing ? (
-                <GraphControlButton label="Pausar" onClick={() => setPlaying(false)} primary>
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-                    <rect x="7" y="5" width="3.5" height="14" rx="1" />
-                    <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
-                  </svg>
-                </GraphControlButton>
-              ) : (
-                <GraphControlButton
-                  label="Reproducir automático"
-                  onClick={() => {
-                    setPlaying(true);
-                    setShowAll(false);
-                  }}
-                  primary
-                >
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-                    <path d="M7 5l12 7-12 7V5z" />
-                  </svg>
-                </GraphControlButton>
-              )}
-
+            ) : (
               <GraphControlButton
-                label="Siguiente"
+                label="Reproducir automático"
                 onClick={() => {
-                  setCurrentStage((current) => Math.min(totalStages - 1, current + 1));
-                  setPlaying(false);
-                }}
-                disabled={currentStage >= totalStages - 1 && !showAll}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </GraphControlButton>
-
-              <div className="mx-1 h-7 w-px bg-border" />
-
-              <div className="rounded-full bg-surface-alt px-3 py-1.5 font-mono text-[11px] font-semibold text-primary-dark">
-                {Math.min(currentStage + 1, totalStages)} / {totalStages}
-              </div>
-
-              <GraphControlButton
-                label="Reiniciar"
-                onClick={() => {
-                  setCurrentStage(0);
-                  setPlaying(false);
+                  setPlaying(true);
                   setShowAll(false);
                 }}
+                primary
               >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+                  <path d="M7 5l12 7-12 7V5z" />
+                </svg>
+              </GraphControlButton>
+            )}
+
+            <GraphControlButton
+              label="Siguiente"
+              onClick={() => {
+                setCurrentStage((current) => Math.min(totalStages - 1, current + 1));
+                setPlaying(false);
+              }}
+              disabled={currentStage >= totalStages - 1 && !showAll}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </GraphControlButton>
+
+            <div className="mx-1 h-7 w-px bg-border" />
+
+            <div className="rounded-full bg-surface-alt px-3 py-1.5 font-mono text-[11px] font-semibold text-primary-dark">
+              {Math.min(currentStage + 1, totalStages)} / {totalStages}
+            </div>
+
+            <GraphControlButton
+              label="Reiniciar"
+              onClick={() => {
+                setCurrentStage(0);
+                setPlaying(false);
+                setShowAll(false);
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+              >
+                <path d="M3 12a9 9 0 1 0 3-6.7L3 8" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M3 3v5h5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </GraphControlButton>
+
+            <GraphControlButton
+              label={showAll ? "Modo paso a paso" : "Mostrar todo"}
+              onClick={() => {
+                const nextShowAll = !showAll;
+                setShowAll(nextShowAll);
+                setPlaying(false);
+                if (nextShowAll) {
+                  setCurrentStage(totalStages - 1);
+                }
+              }}
+            >
+              {showAll ? (
                 <svg
                   viewBox="0 0 24 24"
                   className="h-4 w-4"
@@ -236,165 +262,144 @@ export function GraphicalMethodSection({ result }: GraphicalMethodSectionProps) 
                   stroke="currentColor"
                   strokeWidth="2.2"
                 >
-                  <path
-                    d="M3 12a9 9 0 1 0 3-6.7L3 8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path d="M3 3v5h5" strokeLinecap="round" strokeLinejoin="round" />
+                  <rect x="4" y="5" width="16" height="6" rx="2" />
+                  <rect x="4" y="13" width="16" height="6" rx="2" />
                 </svg>
-              </GraphControlButton>
+              ) : (
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                >
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                  <path d="M4 10h16M10 4v16" />
+                </svg>
+              )}
+            </GraphControlButton>
+          </div>
+        </div>
 
-              <GraphControlButton
-                label={showAll ? "Modo paso a paso" : "Mostrar todo"}
-                onClick={() => {
-                  const nextShowAll = !showAll;
-                  setShowAll(nextShowAll);
-                  setPlaying(false);
-                  if (nextShowAll) {
-                    setCurrentStage(totalStages - 1);
-                  }
-                }}
-              >
-                {showAll ? (
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                  >
-                    <rect x="4" y="5" width="16" height="6" rx="2" />
-                    <rect x="4" y="13" width="16" height="6" rx="2" />
-                  </svg>
-                ) : (
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                  >
-                    <rect x="4" y="4" width="16" height="16" rx="2" />
-                    <path d="M4 10h16M10 4v16" />
-                  </svg>
-                )}
-              </GraphControlButton>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="md-surface p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Vértices factibles
+            </div>
+            <div className="mt-2 font-mono text-3xl font-bold text-primary-dark">
+              {result.vertices.length}
             </div>
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="md-surface p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Vértices factibles
-              </div>
-              <div className="mt-2 font-mono text-3xl font-bold text-primary-dark">
-                {result.vertices.length}
-              </div>
+          <div className="md-surface p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Punto óptimo
             </div>
-            <div className="md-surface p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Punto óptimo
-              </div>
-              <div className="mt-2 font-mono text-2xl font-bold text-primary-dark">
-                {result.optimalVertex
-                  ? `(${formatNumber(result.optimalVertex.x)}, ${formatNumber(result.optimalVertex.y)})`
-                  : "-"}
-              </div>
+            <div className="mt-2 font-mono text-2xl font-bold text-primary-dark">
+              {result.optimalVertex
+                ? `(${formatNumber(result.optimalVertex.x)}, ${formatNumber(result.optimalVertex.y)})`
+                : "-"}
             </div>
-            <div className="md-surface p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Valor máximo
-              </div>
-              <div className="mt-2 font-mono text-3xl font-bold text-primary-dark">
-                {result.optimalVertex ? `Z = ${formatNumber(result.optimalVertex.z)}` : "-"}
-              </div>
+          </div>
+          <div className="md-surface p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {result.optimizationType === "min" ? "Valor mínimo" : "Valor máximo"}
+            </div>
+            <div className="mt-2 font-mono text-3xl font-bold text-primary-dark">
+              {result.optimalVertex ? `Z = ${formatNumber(result.optimalVertex.z)}` : "-"}
             </div>
           </div>
         </div>
 
-        <div className="space-y-4 xl:sticky xl:top-4 xl:self-start">
-          <div className="md-surface p-4">
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Etapa actual
-            </div>
-            <h3 className="text-lg font-semibold text-foreground">{activeStage?.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              {activeStage?.description}
-            </p>
-            {activeStage?.notes && activeStage.notes.length > 0 ? (
-              <div className="mt-3 space-y-2 rounded-2xl bg-surface-alt p-3 text-sm text-muted-foreground">
-                {activeStage.notes.map((note) => (
-                  <div key={note} className="flex gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent" />
-                    <span>{note}</span>
-                  </div>
-                ))}
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+          <div className="space-y-4">
+            <div className="md-surface p-4">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Etapa actual
               </div>
-            ) : null}
-          </div>
+              <h3 className="text-lg font-semibold text-foreground">{activeStage?.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {activeStage?.description}
+              </p>
+              {activeStage?.notes && activeStage.notes.length > 0 ? (
+                <div className="mt-3 space-y-2 rounded-2xl bg-surface-alt p-3 text-sm text-muted-foreground">
+                  {activeStage.notes.map((note) => (
+                    <div key={note} className="flex gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent" />
+                      <span>{note}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
 
-          <div className="md-surface p-3">
-            <div className="mb-2 flex items-center justify-between gap-2 px-1">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Secuencia de pasos
+            <div className="md-surface p-3">
+              <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Secuencia de pasos
+                </div>
+                <div className="font-mono text-[11px] font-semibold text-primary-dark">
+                  {Math.min(currentStage + 1, totalStages)} / {totalStages}
+                </div>
               </div>
-              <div className="font-mono text-[11px] font-semibold text-primary-dark">
-                {Math.min(currentStage + 1, totalStages)} / {totalStages}
-              </div>
-            </div>
-            <div className="scrollbar-thin overflow-x-auto">
-              <div className="flex items-center gap-2 px-1">
-                {result.stages.map((stage, index) => {
-                  const active = index === currentStage;
-                  const done = index < currentStage || showAll;
-                  return (
-                    <button
-                      key={stage.id}
-                      type="button"
-                      onClick={() => {
-                        setCurrentStage(index);
-                        setPlaying(false);
-                      }}
-                      className="group relative flex shrink-0 flex-col items-center gap-1.5"
-                    >
-                      <motion.div
-                        animate={{
-                          scale: active ? 1.1 : 1,
-                          backgroundColor: active
-                            ? "var(--primary)"
-                            : done
-                              ? "var(--accent)"
-                              : "var(--muted)",
+              <div className="scrollbar-thin overflow-x-auto">
+                <div className="flex items-center gap-2 px-1">
+                  {result.stages.map((stage, index) => {
+                    const active = index === currentStage;
+                    const done = index < currentStage || showAll;
+                    return (
+                      <button
+                        key={stage.id}
+                        type="button"
+                        onClick={() => {
+                          setCurrentStage(index);
+                          setPlaying(false);
                         }}
-                        className="grid h-7 w-7 place-items-center rounded-full font-mono text-[11px] font-bold text-primary-foreground shadow-elevation-1"
+                        className="group relative flex shrink-0 flex-col items-center gap-1.5"
                       >
-                        {done && !active ? (
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-3.5 w-3.5"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                          >
-                            <path d="M5 12l5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        ) : (
-                          <span
-                            className={active ? "text-primary-foreground" : "text-muted-foreground"}
-                          >
-                            {index + 1}
-                          </span>
-                        )}
-                      </motion.div>
-                      <span
-                        className={`whitespace-nowrap text-[10px] font-medium ${active ? "text-primary-dark" : "text-muted-foreground"}`}
-                      >
-                        {stage.kind}
-                      </span>
-                    </button>
-                  );
-                })}
+                        <motion.div
+                          animate={{
+                            scale: active ? 1.1 : 1,
+                            backgroundColor: active
+                              ? "var(--primary)"
+                              : done
+                                ? "var(--accent)"
+                                : "var(--muted)",
+                          }}
+                          className="grid h-7 w-7 place-items-center rounded-full font-mono text-[11px] font-bold text-primary-foreground shadow-elevation-1"
+                        >
+                          {done && !active ? (
+                            <svg
+                              viewBox="0 0 24 24"
+                              className="h-3.5 w-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                            >
+                              <path
+                                d="M5 12l5 5L20 7"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          ) : (
+                            <span
+                              className={
+                                active ? "text-primary-foreground" : "text-muted-foreground"
+                              }
+                            >
+                              {index + 1}
+                            </span>
+                          )}
+                        </motion.div>
+                        <span
+                          className={`whitespace-nowrap text-[10px] font-medium ${active ? "text-primary-dark" : "text-muted-foreground"}`}
+                        >
+                          {stage.kind}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
@@ -406,7 +411,9 @@ export function GraphicalMethodSection({ result }: GraphicalMethodSectionProps) 
                   Tabla de evaluación
                 </div>
                 <div className="text-xs text-muted-foreground/80">
-                  Comparación de Z en cada vértice factible
+                  {result.optimizationType === "min"
+                    ? "Comparación del menor valor de Z en cada vértice factible"
+                    : "Comparación del mayor valor de Z en cada vértice factible"}
                 </div>
               </div>
               <button
@@ -452,7 +459,7 @@ export function GraphicalMethodSection({ result }: GraphicalMethodSectionProps) 
           </div>
 
           {visibleStages.length > 0 && showAll ? (
-            <div className="scrollbar-thin space-y-3 xl:max-h-90 xl:overflow-auto xl:pr-1">
+            <div className="scrollbar-thin space-y-3 xl:max-h-90 xl:overflow-auto xl:pr-1 xl:col-span-2">
               {visibleStages.map((stage, index) => (
                 <div key={stage.id} className="md-surface p-4">
                   <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-accent">

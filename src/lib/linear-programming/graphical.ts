@@ -265,6 +265,7 @@ export const solveGraphically = (problem: LinearProgrammingProblem): GraphicalRe
       available: false,
       message:
         "El método gráfico solo está disponible para problemas con dos variables de decisión.",
+      optimizationType: problem.optimizationType,
       lines: [],
       vertices: [],
       feasiblePolygon: [],
@@ -344,9 +345,18 @@ export const solveGraphically = (problem: LinearProgrammingProblem): GraphicalRe
   );
 
   const optimalVertex = labeledVertices.reduce<GraphicalVertex | undefined>((best, current) => {
-    if (!best || current.z > best.z + EPSILON) {
+    if (!best) {
       return current;
     }
+
+    if (problem.optimizationType === "min") {
+      return current.z < best.z - EPSILON ? current : best;
+    }
+
+    if (current.z > best.z + EPSILON) {
+      return current;
+    }
+
     return best;
   }, undefined);
 
@@ -393,7 +403,7 @@ export const solveGraphically = (problem: LinearProgrammingProblem): GraphicalRe
 
       const description =
         optimalVertex?.id === vertex.id
-          ? `Para Z = ${formatNumber(vertex.z)}, la recta de nivel toca la región factible en ${vertex.label}(${formatNumber(vertex.x)}, ${formatNumber(vertex.y)}), que es el último punto de contacto en dirección de maximización.`
+          ? `Para Z = ${formatNumber(vertex.z)}, la recta de nivel toca la región factible en ${vertex.label}(${formatNumber(vertex.x)}, ${formatNumber(vertex.y)}), que es el ${problem.optimizationType === "min" ? "primer" : "último"} punto de contacto en dirección de ${problem.optimizationType === "min" ? "minimización" : "maximización"}.`
           : `Para Z = ${formatNumber(vertex.z)}, la recta de nivel pasa por el vértice ${vertex.label}(${formatNumber(vertex.x)}, ${formatNumber(vertex.y)}).`;
 
       return {
@@ -446,7 +456,7 @@ export const solveGraphically = (problem: LinearProgrammingProblem): GraphicalRe
       id: "vertices",
       title: "Vértices factibles",
       description:
-        "Se identifican los vértices de la región factible. En programación lineal, el máximo global se alcanza en uno de estos puntos extremos.",
+        "Se identifican los vértices de la región factible. En programación lineal, el óptimo global se alcanza en uno de estos puntos extremos.",
       kind: "vertices",
       revealedVertexIds: vertices.map((vertex) => vertex.id),
       notes: vertices.map(
@@ -485,35 +495,48 @@ export const solveGraphically = (problem: LinearProgrammingProblem): GraphicalRe
     ),
     {
       id: "direction",
-      title: "Dirección de maximización",
+      title:
+        problem.optimizationType === "min"
+          ? "Dirección de minimización"
+          : "Dirección de maximización",
       description:
-        "La función objetivo se desplaza paralelamente aumentando Z. En maximización buscamos la recta más alejada del origen que todavía toca la región factible.",
+        problem.optimizationType === "min"
+          ? "La función objetivo se desplaza paralelamente reduciendo Z. En minimización buscamos la recta más cercana al origen que todavía toca la región factible."
+          : "La función objetivo se desplaza paralelamente aumentando Z. En maximización buscamos la recta más alejada del origen que todavía toca la región factible.",
       kind: "direction",
-      focusLevelId: levelLines[levelLines.length - 1]?.id,
+      focusLevelId:
+        problem.optimizationType === "min"
+          ? levelLines[0]?.id
+          : levelLines[levelLines.length - 1]?.id,
       focusVertexId: optimalVertex?.id,
       revealedVertexIds: evaluationOrder.map((vertex) => vertex.id),
       revealedLevelIds: levelLines.map((levelLine) => levelLine.id),
       notes: [
         "Cada recta de nivel conserva la misma pendiente que la función objetivo.",
-        "El último punto de contacto con la región factible determina el máximo global.",
+        problem.optimizationType === "min"
+          ? "El primer punto de contacto con la región factible determina el mínimo global."
+          : "El último punto de contacto con la región factible determina el máximo global.",
       ],
     },
     {
       id: "optimal",
       title: "Punto óptimo",
       description: optimalVertex
-        ? `Óptimo: (${formatNumber(optimalVertex.x)}, ${formatNumber(optimalVertex.y)}) con Z = ${formatNumber(optimalVertex.z)}. Máximo global en la región factible.`
+        ? `Óptimo: (${formatNumber(optimalVertex.x)}, ${formatNumber(optimalVertex.y)}) con Z = ${formatNumber(optimalVertex.z)}. ${problem.optimizationType === "min" ? "Mínimo global" : "Máximo global"} en la región factible.`
         : "No fue posible determinar un punto óptimo gráfico.",
       kind: "optimal",
       focusVertexId: optimalVertex?.id,
-      focusLevelId: levelLines[levelLines.length - 1]?.id,
+      focusLevelId:
+        problem.optimizationType === "min"
+          ? levelLines[0]?.id
+          : levelLines[levelLines.length - 1]?.id,
       revealedVertexIds: evaluationOrder.map((vertex) => vertex.id),
       revealedLevelIds: levelLines.map((levelLine) => levelLine.id),
       notes: optimalVertex
         ? [
             `Óptimo: (${formatNumber(optimalVertex.x)}, ${formatNumber(optimalVertex.y)})`,
-            `Valor máximo: Z = ${formatNumber(optimalVertex.z)}`,
-            "Máximo global en la región factible.",
+            `Valor ${problem.optimizationType === "min" ? "mínimo" : "máximo"}: Z = ${formatNumber(optimalVertex.z)}`,
+            `${problem.optimizationType === "min" ? "Mínimo global" : "Máximo global"} en la región factible.`,
           ]
         : undefined,
     },
@@ -521,19 +544,25 @@ export const solveGraphically = (problem: LinearProgrammingProblem): GraphicalRe
       id: "conclusion",
       title: "Conclusión gráfica",
       description: optimalVertex
-        ? `El máximo global en la región factible se alcanza en (${formatNumber(optimalVertex.x)}, ${formatNumber(optimalVertex.y)}) con Z = ${formatNumber(optimalVertex.z)}.`
+        ? `El ${problem.optimizationType === "min" ? "mínimo global" : "máximo global"} en la región factible se alcanza en (${formatNumber(optimalVertex.x)}, ${formatNumber(optimalVertex.y)}) con Z = ${formatNumber(optimalVertex.z)}.`
         : "No fue posible determinar un vértice óptimo.",
       kind: "conclusion",
       focusVertexId: optimalVertex?.id,
-      focusLevelId: levelLines[levelLines.length - 1]?.id,
+      focusLevelId:
+        problem.optimizationType === "min"
+          ? levelLines[0]?.id
+          : levelLines[levelLines.length - 1]?.id,
       revealedVertexIds: evaluationOrder.map((vertex) => vertex.id),
       revealedLevelIds: levelLines.map((levelLine) => levelLine.id),
-      notes: ["Máximo global en la región factible."],
+      notes: [
+        `${problem.optimizationType === "min" ? "Mínimo global" : "Máximo global"} en la región factible.`,
+      ],
     },
   ];
 
   return {
     available: true,
+    optimizationType: problem.optimizationType,
     lines: graphicalLines,
     vertices,
     feasiblePolygon,

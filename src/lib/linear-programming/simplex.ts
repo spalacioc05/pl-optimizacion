@@ -15,14 +15,19 @@ import {
   cloneTableau,
   formatAugmentedConstraint,
   formatAugmentedObjective,
+  formatCanonicalObjectiveFunction,
   formatConstraint,
   formatNumber,
   formatObjectiveFunction,
   getBasicVariableValues,
+  getOptimizationVerb,
+  mapCanonicalOptimalValueToOriginal,
+  minimizationTransformationMessage,
   normalizeNumber,
   ratioValuesForBoard,
   roundForDisplay,
   tableauToBoard,
+  toCanonicalMaximizationProblem,
 } from "@/lib/linear-programming/utils";
 
 interface TableauState {
@@ -292,8 +297,9 @@ const buildStepSummary = (
 };
 
 export const solveSimplex = (problem: LinearProgrammingProblem): SimplexResult => {
+  const canonicalProblem = toCanonicalMaximizationProblem(problem);
   const iterations: SimplexIteration[] = [];
-  const initialState = buildInitialState(problem);
+  const initialState = buildInitialState(canonicalProblem);
   const initialTableau = cloneTableau(initialState.tableau);
 
   iterations.push({
@@ -307,7 +313,7 @@ export const solveSimplex = (problem: LinearProgrammingProblem): SimplexResult =
       isMinimum: false,
     })),
     rowOperations: [],
-    explanation: buildInitialExplanation(problem, initialState.tableau),
+    explanation: buildInitialExplanation(canonicalProblem, initialState.tableau),
     status: hasNegativeInObjective(initialState.tableau) ? "initial" : "optimal",
     statusLabel: "Solución básica factible inicial",
   });
@@ -344,6 +350,7 @@ export const solveSimplex = (problem: LinearProgrammingProblem): SimplexResult =
       return {
         iterations,
         optimalValue: 0,
+        optimizationType: problem.optimizationType,
         decisionVariables: {},
         slackVariables: {},
         status: "unbounded",
@@ -352,6 +359,8 @@ export const solveSimplex = (problem: LinearProgrammingProblem): SimplexResult =
         augmentedConstraints: problem.constraints.map((constraint, index) =>
           formatAugmentedConstraint(constraint, index),
         ),
+        transformationNote:
+          problem.optimizationType === "min" ? minimizationTransformationMessage : undefined,
       };
     }
 
@@ -406,21 +415,29 @@ export const solveSimplex = (problem: LinearProgrammingProblem): SimplexResult =
     problem.objectiveCoefficients.length,
     problem.constraints.length,
   );
+  const optimalValue = mapCanonicalOptimalValueToOriginal(problem, solution.optimalValue);
 
   return {
     iterations,
-    optimalValue: solution.optimalValue,
+    optimalValue,
+    optimizationType: problem.optimizationType,
     decisionVariables: solution.decisionVariables,
     slackVariables: solution.slackVariables,
     status: "optimal",
     message: [
-      buildSolutionInterpretation(solution.decisionVariables, solution.optimalValue),
+      buildSolutionInterpretation(
+        solution.decisionVariables,
+        optimalValue,
+        problem.optimizationType,
+      ),
       buildSlackInterpretation(solution.slackVariables),
     ].join(" "),
     augmentedObjective: formatAugmentedObjective(problem),
     augmentedConstraints: problem.constraints.map((constraint, index) =>
       formatAugmentedConstraint(constraint, index),
     ),
+    transformationNote:
+      problem.optimizationType === "min" ? minimizationTransformationMessage : undefined,
   };
 };
 
@@ -442,13 +459,22 @@ export const buildSimplexSteps = (
       title: "Paso 2 — Forma aumentada",
       subtitle: "Introducción de variables de holgura",
       explanation:
-        "Convertimos cada restricción ≤ en una igualdad agregando variables de holgura con costo cero para formar la base inicial.",
+        problem.optimizationType === "min"
+          ? "Primero transformamos la minimización a maximización de -Z y luego convertimos cada restricción ≤ en una igualdad agregando variables de holgura con costo cero para formar la base inicial."
+          : "Convertimos cada restricción ≤ en una igualdad agregando variables de holgura con costo cero para formar la base inicial.",
       kind: "augmented",
       operations: [
+        ...(problem.optimizationType === "min"
+          ? [
+              `Modelo original: ${formatObjectiveFunction(problem)}`,
+              `Transformación interna: ${formatCanonicalObjectiveFunction(problem)}`,
+              minimizationTransformationMessage,
+            ]
+          : []),
         ...problem.constraints.map((constraint, index) =>
           formatAugmentedConstraint(constraint, index),
         ),
-        formatAugmentedObjective(problem),
+        `${problem.optimizationType === "min" ? "Tablero equivalente" : "Función objetivo aumentada"}: ${formatAugmentedObjective(problem)}`,
       ],
     },
   ];
@@ -709,7 +735,10 @@ export const buildSimplexSteps = (
     title: "Paso final — Solución óptima",
     subtitle:
       result.status === "optimal" ? "Todos los coeficientes en Z son no negativos" : "Estado final",
-    explanation: result.message,
+    explanation:
+      result.transformationNote && result.status === "optimal"
+        ? `${result.transformationNote} ${result.message}`
+        : result.message,
     kind: "final",
     table:
       result.iterations.length > 0
@@ -730,6 +759,10 @@ export const buildSimplexSteps = (
 
 export const buildOriginalModelLines = (problem: LinearProgrammingProblem): string[] => [
   formatObjectiveFunction(problem),
+  ...(problem.optimizationType === "min"
+    ? [formatCanonicalObjectiveFunction(problem), minimizationTransformationMessage]
+    : []),
   ...problem.constraints.map((constraint) => formatConstraint(constraint)),
+  `Objetivo: ${getOptimizationVerb(problem.optimizationType)} Z con variables no negativas.`,
   `X${problem.objectiveCoefficients.length > 1 ? "i" : "1"} >= 0 para toda variable.`,
 ];

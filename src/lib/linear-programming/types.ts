@@ -1,4 +1,4 @@
-export type OptimizationType = "max";
+export type OptimizationType = "max" | "min";
 export type ConstraintOperator = "<=";
 
 export interface LinearConstraint {
@@ -91,10 +91,12 @@ export interface SimplexResult {
   message: string;
   iterations: SimplexIteration[];
   optimalValue: number;
+  optimizationType: OptimizationType;
   decisionVariables: Record<string, number>;
   slackVariables: Record<string, number>;
   augmentedObjective: string;
   augmentedConstraints: string[];
+  transformationNote?: string;
 }
 
 export interface SensitivityConstraintRow {
@@ -284,6 +286,7 @@ export interface GraphicalStage {
 export interface GraphicalResult {
   available: boolean;
   message?: string;
+  optimizationType: OptimizationType;
   lines: GraphicalLine[];
   vertices: GraphicalVertex[];
   feasiblePolygon: GraphicalVertex[];
@@ -292,4 +295,59 @@ export interface GraphicalResult {
   xMax: number;
   yMax: number;
   stages: GraphicalStage[];
+}
+
+export interface SpacePoint3D {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  z: number;
+  objectiveValue: number;
+  activeConstraints: string[];
+}
+
+export interface ConstraintPlane3D {
+  id: string;
+  label: string;
+  description: string;
+  coefficients: [number, number, number];
+  rhs: number;
+  normal: [number, number, number];
+  anchor: [number, number, number];
+  color: string;
+}
+
+export type ThreeDimensionalStageKind =
+  | "space"
+  | "constraint"
+  | "region"
+  | "vertices"
+  | "evaluation"
+  | "direction"
+  | "optimal"
+  | "conclusion";
+
+export interface ThreeDimensionalStage {
+  id: string;
+  title: string;
+  description: string;
+  kind: ThreeDimensionalStageKind;
+  focusPlaneId?: string;
+  focusPointId?: string;
+  revealedPlaneIds?: string[];
+  revealedPointIds?: string[];
+  notes?: string[];
+}
+
+export interface ThreeDimensionalVisualization {
+  available: boolean;
+  message?: string;
+  optimizationType: OptimizationType;
+  bounds: { x: number; y: number; z: number };
+  planes: ConstraintPlane3D[];
+  feasiblePoints: SpacePoint3D[];
+  optimalPoint?: SpacePoint3D;
+  stages: ThreeDimensionalStage[];
+  notes: string[];
 }

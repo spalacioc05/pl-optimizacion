@@ -334,13 +334,13 @@ export function OptimizationGraph({ model, progress = 1 }: Props) {
       {/* legend */}
       <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-sm bg-[var(--feasible)] ring-1 ring-accent/40" />
+          <span className="h-3 w-3 rounded-sm bg-feasible ring-1 ring-accent/40" />
           Región factible
         </span>
         {model.constraints.map((_, i) => (
           <span key={i} className="inline-flex items-center gap-1.5">
             <span
-              className="h-[2px] w-4 rounded-full"
+              className="h-0.5 w-4 rounded-full"
               style={{ background: COLORS[i % COLORS.length] }}
             />
             Restricción {i + 1}
