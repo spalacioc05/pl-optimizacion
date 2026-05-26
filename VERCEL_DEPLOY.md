@@ -7,6 +7,7 @@ Este proyecto ahora se despliega en Vercel como sitio estatico prerenderizado.
 - `vercel.json` fija `buildCommand` en `npm run build`.
 - `vercel.json` fija `outputDirectory` en `dist/client`.
 - `vite.config.ts` activa `prerender` para que el build genere `dist/client/index.html`.
+- `package.json` ejecuta el build a traves de `scripts/vite-build.mjs` para compatibilidad con Vercel.
 
 ## Pasos en Vercel
 
@@ -23,8 +24,8 @@ El error `404: NOT_FOUND` aparecia porque el proyecto estaba generando assets cl
 
 Con el prerender activado, el build genera `dist/client/index.html`, que es el archivo que Vercel necesita para servir la ruta `/`.
 
-## Nota local
+## Nota tecnica
 
-En este entorno de terminal aparecio un error final de cierre de `vite preview` durante el post-build (`process.stdin.off is not a function`), pero el prerender ya se habia completado y `dist/client/index.html` fue generado correctamente.
+Vercel estaba ejecutando el prerender correctamente, pero Vite fallaba al cerrar el preview server en la rama donde intenta usar `process.stdin.off(...)`.
 
-Ese cierre anomalo no cambia el artefacto que Vercel publica.
+El wrapper `scripts/vite-build.mjs` fuerza el build en modo `CI=true`, con lo que Vite omite esa rama de teardown y el despliegue puede terminar normalmente.
