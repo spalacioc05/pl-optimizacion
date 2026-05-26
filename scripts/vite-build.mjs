@@ -30,7 +30,7 @@ function patchProcessStreamGetter(streamName) {
   });
 }
 
-process.env.CI ??= "true";
+process.env.CI = "true";
 
 ensureOff(process);
 patchProcessStreamGetter("stdin");
