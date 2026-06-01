@@ -110,6 +110,9 @@ export interface SensitivityConstraintRow {
 export interface SensitivityReducedCostRow {
   variable: string;
   finalValue: number;
+  objectiveCoefficient: number;
+  weightedContribution: number;
+  tableauValue: number;
   reducedCost: number;
   status: string;
   interpretation: string;
@@ -128,6 +131,7 @@ export interface SensitivityObjectiveRangeRow {
   currentCoefficient: number;
   allowableIncrease: string;
   allowableDecrease: string;
+  range: string;
   status: string;
 }
 
@@ -136,7 +140,44 @@ export interface SensitivityRhsRangeRow {
   rhs: number;
   allowableIncrease: string;
   allowableDecrease: string;
+  range: string;
   status: string;
+}
+
+export interface MatrixTable {
+  title: string;
+  rowLabels: string[];
+  columnLabels: string[];
+  values: number[][];
+}
+
+export interface VectorTable {
+  title: string;
+  labels: string[];
+  values: number[];
+}
+
+export interface SensitivityMatrixData {
+  available: boolean;
+  message?: string;
+  augmentedMatrix: MatrixTable;
+  basisMatrix: MatrixTable;
+  basisInverse: MatrixTable;
+  basicCosts: VectorTable;
+  rhsVector: VectorTable;
+  basicSolution: VectorTable;
+  shadowPrices: VectorTable;
+}
+
+export interface SensitivityBasicSolutionRow {
+  variable: string;
+  value: number;
+}
+
+export interface SensitivityInterpretationRow {
+  subject: string;
+  value: string;
+  interpretation: string;
 }
 
 export interface SensitivityAnalysis {
@@ -146,6 +187,7 @@ export interface SensitivityAnalysis {
   basicVariables: string[];
   nonBasicVariables: string[];
   slackVariables: Array<{ variable: string; value: number }>;
+  basicSolutionRows: SensitivityBasicSolutionRow[];
   activeConstraints: string[];
   inactiveConstraints: string[];
   constraintRows: SensitivityConstraintRow[];
@@ -153,6 +195,9 @@ export interface SensitivityAnalysis {
   shadowPriceRows: SensitivityShadowPriceRow[];
   objectiveRangeRows: SensitivityObjectiveRangeRow[];
   rhsRangeRows: SensitivityRhsRangeRow[];
+  sensitivityMatrix: SensitivityMatrixData;
+  interpretationRows: SensitivityInterpretationRow[];
+  reducedCostConvention: string;
   notes: string[];
 }
 
