@@ -364,14 +364,76 @@ export const buildSensitivityAnalysis = (
     };
   });
 
-  const objectiveRangeRows = decisionVariables.map((variable, index) => ({
-    variable,
-    currentCoefficient: problem.objectiveCoefficients[index],
-    allowableIncrease: "Pendiente de cálculo completo",
-    allowableDecrease: "Pendiente de cálculo completo",
-    range: "Pendiente de cálculo completo",
-    status: "Estructura lista",
-  }));
+  const objectiveRangeRows = decisionVariables.map((variable, index) => {
+    const current = problem.objectiveCoefficients[index];
+    try {
+      const isBasic = basicVariables.includes(variable);
+
+      // Recompute reduced costs r_j = c_j - π A_j for all variables
+      const allCols = augmentedMatrix.columnLabels;
+      const allReducedCosts: Record<string, number> = {};
+      allCols.forEach((colLabel, colIdx) => {
+        const column = augmentedMatrix.values.map((row) => row[colIdx] ?? 0);
+        const weightedContribution = normalizeNumber(
+          shadowPrices.reduce((sum, value, rowIndex) => sum + value * (column[rowIndex] ?? 0), 0),
+        );
+        const coeff = getVariableCost(colLabel, canonicalProblem);
+        allReducedCosts[colLabel] = normalizeNumber(coeff - weightedContribution);
+      });
+
+      let lowerDelta = Number.NEGATIVE_INFINITY;
+      let upperDelta = Number.POSITIVE_INFINITY;
+
+      if (!isBasic) {
+        // For non-basic variable j: r_j + Δc_j ≤ 0 so Δc_j ≤ -r_j
+        const r = allReducedCosts[variable] ?? 0;
+        lowerDelta = Number.NEGATIVE_INFINITY;
+        upperDelta = -r;
+      } else {
+        // For basic variable p: for all non-basic j => r_j - Δc_p * alpha_j ≤ 0
+        const basicIndex = basicVariables.indexOf(variable);
+        const rowOfBinv = basisInverseValues[basicIndex];
+
+        allVariables.forEach((colLabel, colIdx) => {
+          if (basicVariables.includes(colLabel)) return;
+          const column = augmentedMatrix.values.map((row) => row[colIdx] ?? 0);
+          const alpha = rowOfBinv.reduce((sum, val, rowIndex) => sum + val * (column[rowIndex] ?? 0), 0);
+          const rj = allReducedCosts[colLabel] ?? 0;
+          if (Math.abs(alpha) < EPSILON) return;
+          const bound = rj / alpha;
+          if (alpha > 0) {
+            lowerDelta = Math.max(lowerDelta, bound);
+          } else if (alpha < 0) {
+            upperDelta = Math.min(upperDelta, bound);
+          }
+        });
+      }
+
+      const allowableIncrease = Number.isFinite(upperDelta) ? Math.max(0, upperDelta) : Number.POSITIVE_INFINITY;
+      const allowableDecrease = Number.isFinite(lowerDelta) ? Math.max(0, -lowerDelta) : Number.POSITIVE_INFINITY;
+
+      const rangeLower = Number.isFinite(lowerDelta) ? formatNumber(current + lowerDelta) : "-∞";
+      const rangeUpper = Number.isFinite(upperDelta) ? formatNumber(current + upperDelta) : "+∞";
+
+      return {
+        variable,
+        currentCoefficient: current,
+        allowableIncrease: allowableIncrease === Number.POSITIVE_INFINITY ? "Sin límite" : formatBound(allowableIncrease, "increase"),
+        allowableDecrease: allowableDecrease === Number.POSITIVE_INFINITY ? "Sin límite" : formatBound(allowableDecrease, "decrease"),
+        range: `[${rangeLower}, ${rangeUpper}]`,
+        status: "Calculado",
+      };
+    } catch (e) {
+      return {
+        variable,
+        currentCoefficient: current,
+        allowableIncrease: "Pendiente de cálculo",
+        allowableDecrease: "Pendiente de cálculo",
+        range: "Pendiente de cálculo",
+        status: "Pendiente",
+      };
+    }
+  });
 
   const rhsRangeRows = problem.constraints.map((constraint, columnIndex) => {
     let lowerDelta = Number.NEGATIVE_INFINITY;

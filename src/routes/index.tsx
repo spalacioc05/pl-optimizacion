@@ -257,6 +257,16 @@ function Index() {
                   ),
                 }));
               }}
+              onConstraintOperatorChange={(rowIndex, value) => {
+                setSelectedId(null);
+                setPlaying(false);
+                setDraft((current) => ({
+                  ...current,
+                  constraints: current.constraints.map((constraint, currentRowIndex) =>
+                    currentRowIndex === rowIndex ? { ...constraint, operator: value as any } : constraint,
+                  ),
+                }));
+              }}
               onSolve={() => {
                 const validation = validateDraft(draft);
                 if (!validation.isValid || !validation.problem) {

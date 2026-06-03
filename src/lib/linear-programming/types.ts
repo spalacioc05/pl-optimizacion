@@ -1,5 +1,5 @@
 export type OptimizationType = "max" | "min";
-export type ConstraintOperator = "<=";
+export type ConstraintOperator = "<=" | ">=" | "=";
 
 export interface LinearConstraint {
   coefficients: number[];

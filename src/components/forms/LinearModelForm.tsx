@@ -15,6 +15,7 @@ interface Props {
   onObjectiveChange: (index: number, value: string) => void;
   onConstraintCoefficientChange: (rowIndex: number, columnIndex: number, value: string) => void;
   onConstraintRhsChange: (rowIndex: number, value: string) => void;
+  onConstraintOperatorChange: (rowIndex: number, value: string) => void;
   onSolve: () => void;
   onReset: () => void;
 }
@@ -106,6 +107,7 @@ export function LinearModelForm({
   onObjectiveChange,
   onConstraintCoefficientChange,
   onConstraintRhsChange,
+  onConstraintOperatorChange,
   onSolve,
   onReset,
 }: Props) {
@@ -290,9 +292,15 @@ export function LinearModelForm({
                     <span>{`X${columnIndex + 1}`}</span>
                   </span>
                 ))}
-                <span className="rounded-xl bg-secondary px-3 py-2 font-semibold text-secondary-foreground">
-                  ≤
-                </span>
+                <select
+                  value={constraint.operator}
+                  onChange={(e) => onConstraintOperatorChange(rowIndex, e.target.value)}
+                  className="rounded-xl bg-secondary px-3 py-2 font-semibold text-secondary-foreground outline-none"
+                >
+                  <option value="<=">≤</option>
+                  <option value=">=">≥</option>
+                  <option value="=">=</option>
+                </select>
                 <span className="rounded-2xl bg-surface-alt px-2.5 py-2">
                   <CoefInput
                     value={constraint.rhs}

@@ -13,7 +13,7 @@ import type {
 export const EPSILON = 1e-9;
 
 export const sprintScopeMessage =
-  "Esta versión soporta problemas de maximización o minimización con restricciones ≤, lado derecho no negativo y variables no negativas.";
+  "Esta versión soporta problemas de maximización o minimización con restricciones <=, >= y =, lado derecho no negativo y variables no negativas.";
 
 export const minimizationTransformationMessage =
   "El problema fue ingresado como minimización. Para usar el Simplex tabular actual, se resuelve la maximización equivalente W = -Z. Al final se recupera el valor original de Z.";
@@ -104,7 +104,7 @@ export const problemToDraft = (problem: LinearProgrammingProblem): LinearProgram
   objectiveCoefficients: problem.objectiveCoefficients.map((value) => String(value)),
   constraints: problem.constraints.map((constraint) => ({
     coefficients: constraint.coefficients.map((value) => String(value)),
-    operator: "<=",
+    operator: constraint.operator,
     rhs: String(constraint.rhs),
   })),
 });
@@ -155,7 +155,7 @@ export const validateDraft = (draft: LinearProgrammingDraft): ValidationResult =
 
   if (
     (draft.optimizationType !== "max" && draft.optimizationType !== "min") ||
-    draft.constraintOperator !== "<="
+    (draft.constraintOperator !== "<=" && draft.constraintOperator !== ">=" && draft.constraintOperator !== "=")
   ) {
     errors.push(sprintScopeMessage);
   }
@@ -205,12 +205,14 @@ export const validateDraft = (draft: LinearProgrammingDraft): ValidationResult =
     }
 
     if (constraint.operator !== "<=") {
-      errors.push(sprintScopeMessage);
+      if (constraint.operator !== "<=" && constraint.operator !== ">=" && constraint.operator !== "=") {
+        errors.push(sprintScopeMessage);
+      }
     }
 
     return {
       coefficients,
-      operator: "<=",
+      operator: constraint.operator,
       rhs: Number.isNaN(rhs) ? 0 : rhs,
     };
   });
@@ -262,24 +264,49 @@ export const getOptimizationOutcomeLabel = (
 export const toCanonicalMaximizationProblem = (
   problem: LinearProgrammingProblem,
 ): LinearProgrammingProblem => {
-  const clonedConstraints = problem.constraints.map((constraint) => ({
-    coefficients: [...constraint.coefficients],
-    operator: constraint.operator,
-    rhs: constraint.rhs,
-  }));
+  const canonicalConstraints: LinearConstraint[] = [];
+
+  problem.constraints.forEach((constraint) => {
+    if (constraint.operator === "<=") {
+      canonicalConstraints.push({
+        coefficients: [...constraint.coefficients],
+        operator: "<=",
+        rhs: constraint.rhs,
+      });
+    } else if (constraint.operator === ">=") {
+      // Multiply by -1 to convert to <=
+      canonicalConstraints.push({
+        coefficients: constraint.coefficients.map((c) => -c),
+        operator: "<=",
+        rhs: -constraint.rhs,
+      });
+    } else if (constraint.operator === "=") {
+      // Equality: represent as two inequalities a x <= b and -a x <= -b
+      canonicalConstraints.push({
+        coefficients: [...constraint.coefficients],
+        operator: "<=",
+        rhs: constraint.rhs,
+      });
+      canonicalConstraints.push({
+        coefficients: constraint.coefficients.map((c) => -c),
+        operator: "<=",
+        rhs: -constraint.rhs,
+      });
+    }
+  });
 
   if (problem.optimizationType === "max") {
     return {
       optimizationType: "max",
       objectiveCoefficients: [...problem.objectiveCoefficients],
-      constraints: clonedConstraints,
+      constraints: canonicalConstraints,
     };
   }
 
   return {
     optimizationType: "max",
     objectiveCoefficients: problem.objectiveCoefficients.map((coefficient) => -coefficient),
-    constraints: clonedConstraints,
+    constraints: canonicalConstraints,
   };
 };
 
@@ -329,7 +356,9 @@ export const formatCanonicalObjectiveFunction = (problem: LinearProgrammingProbl
 
 export const formatConstraint = (constraint: LinearConstraint): string => {
   const variables = buildVariableNames("X", constraint.coefficients.length);
-  return `${formatLinearExpression(constraint.coefficients, variables)} <= ${formatNumber(constraint.rhs)}`;
+  return `${formatLinearExpression(constraint.coefficients, variables)} ${constraint.operator} ${formatNumber(
+    constraint.rhs,
+  )}`;
 };
 
 const formatEquationTail = (coefficients: number[], variableLabels: string[]): string => {
